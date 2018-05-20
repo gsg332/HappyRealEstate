@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+    xmlns:jee="http://www.springframework.org/schema/jee"
+	xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xmlns:util="http://www.springframework.org/schema/util"
+	xsi:schemaLocation="
+		http://www.springframework.org/schema/mvc 
+		http://www.springframework.org/schema/mvc/spring-mvc-3.0.xsd
+		http://www.springframework.org/schema/beans 
+		http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/aop 
+        http://www.springframework.org/schema/aop/spring-aop-3.0.xsd
+        http://www.springframework.org/schema/jee 
+        http://www.springframework.org/schema/jee/spring-jee-2.0.xsd
+		http://www.springframework.org/schema/context 
+		http://www.springframework.org/schema/context/spring-context-3.1.xsd
+		http://www.springframework.org/schema/tx 
+		http://www.springframework.org/schema/tx/spring-tx-3.0.xsd
+		http://www.springframework.org/schema/util 
+		http://www.springframework.org/schema/util/spring-util-3.0.xsd">
+        
+    <util:properties id="config" location="classpath:config/config-${deploy.phase}.xml" />
+    
+    <!-- ICT Test DB -->
+    <bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">
+        <property name="driverClassName" value="#{config['classname']}"/> 
+        <property name="url" value="#{config['url']}"/>
+        <property name="username" value="#{config['username']}"/>
+        <property name="password" value="#{config['password']}"/>
+    </bean>
+    
+    <bean id="sessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="dataSource" />
+        <property name="typeAliasesPackage" value="com.happyJ.realestate" />
+        <property name="mapperLocations" value="classpath*:mapper/*.xml" />
+    </bean>
+    
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="basePackage" value="com.happyJ.realestate.dao" />
+        <property name="sqlSessionFactory" ref="sessionFactory" />
+        <property name="annotationClass" value="org.springframework.stereotype.Repository"/>
+    </bean>
+    <!-- ICT Test DB END -->
+    
+    <!-- R&D Test DB (SMS) -->
+    <bean id="dataSourceSMS" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">
+        <property name="driverClassName" value="#{config['classname']}"/> 
+        <property name="url" value="#{config['sms.url']}"/>
+        <property name="username" value="#{config['sms.username']}"/>
+        <property name="password" value="#{config['sms.password']}"/>
+    </bean>
+    
+    <bean id="sessionFactorySMS" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="dataSourceSMS" />
+        <property name="typeAliasesPackage" value="com.happyJ.realestate.sms" />
+        <property name="mapperLocations" value="classpath*:mapper/sms/SmsSendSql.xml" />
+    </bean>
+    
+    <bean id="sqlSessionSMS" class="org.mybatis.spring.SqlSessionTemplate" > 
+          <constructor-arg index="0" ref="sessionFactorySMS" /> 
+    </bean>
+    
+    <bean id="smsSendDao" class="org.mybatis.spring.mapper.MapperFactoryBean">
+        <property name="mapperInterface" value="com.happyJ.realestate.sms.SmsSendDao" />
+        <property name="sqlSessionFactory" ref="sessionFactorySMS" /> 
+        <property name="sqlSessionTemplate" ref="sqlSessionSMS" /> 
+    </bean>         
+    
+    <!-- R&D Test DB (SMS) END -->
+
+	<!-- 트랜잭션 메니져 등록 -->
+	<bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+	     <property name="dataSource" ref="dataSource"/>
+	</bean>
+	
+</beans>

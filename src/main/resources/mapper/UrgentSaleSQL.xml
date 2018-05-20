@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.happyJ.realestate.dao.UrgentSaleDao">
+	
+	<insert id="insertUrgentSale" parameterType="UrgentSaleDto">
+		INSERT INTO URGENT_SALE(
+			article_num,
+			article_description,
+			link_url,
+			re_type,
+			sido,
+			sgg,
+			emd,
+			ri,
+			re_name,
+			floor,
+			dong,
+			urgent_price,
+			junse_price,
+			market_price,
+			lowest_price,
+			highest_price,
+			average_price,
+			supply_extent,
+			exclusive_extent,
+			agent_name,
+			agent_phone,
+			reg_date
+		) VALUES (
+			#{articleNum},
+			#{articleDescription},
+			#{linkUrl},
+			#{reType},
+			#{sido},
+			#{sgg},
+			#{emd},
+			#{ri},
+			#{reName},
+			#{floor},
+			#{dong},
+			#{urgentPrice},
+			#{junsePrice},
+			#{marketPrice},
+			#{lowestPrice},
+			#{highestPrice},
+			#{averagePrice},
+			#{supplyExtent},
+			#{exclusiveExtent},
+			#{agentName},
+			#{agentPhone},
+			#{regDate}
+		)
+		ON DUPLICATE KEY UPDATE
+			article_num = #{articleNum},
+			article_description = #{articleDescription},
+			link_url = #{linkUrl},
+			re_type = #{reType},
+			sido = #{sido},
+			sgg = #{sgg},
+			emd = #{emd},
+			ri = #{ri},
+			re_name = #{reName},
+			floor = #{floor},
+			dong = #{dong},
+			urgent_price = #{urgentPrice},
+			junse_price = #{junsePrice},
+			market_price = #{marketPrice},
+			lowest_price = #{lowestPrice},
+			highest_price = #{highestPrice},
+			average_price = #{averagePrice},
+			supply_extent = #{supplyExtent},
+			exclusive_extent = #{exclusiveExtent},
+			agent_name = #{agentName},
+			agent_phone = #{agentPhone},
+			reg_date = #{regDate}
+		<selectKey keyProperty="article_num" resultType="Long" order="AFTER">
+			SELECT LAST_INSERT_ID()
+		</selectKey>
+	</insert>
+	
+	<select id="selectUrgentSaleList" parameterType="UrgentSaleDto" resultType="UrgentSaleDto">
+		SELECT 
+			u_us_id uUsId,
+			article_num articleNum,
+			article_description articleDescription,
+			link_url linkUrl,
+			re_type reType,
+			sido sido,
+			sgg sgg,
+			emd emd,
+			ri ri,
+			re_name 'reName',
+			floor floor,
+			dong dong,
+			urgent_price urgentPrice,
+			junse_price junsePrice,
+			market_price marketPrice,
+			lowest_price lowestPrice,
+			highest_price highestPrice,
+			average_price averagePrice,
+			supply_extent supplyExtent,
+			exclusive_extent exclusiveExtent,
+			agent_name agentName,
+			agent_phone agentPhone,
+			reg_date regDate
+		FROM URGENT_SALE us
+		<where>
+	    	sido like CONCAT('%',#{sido}, '%')
+	    	<if test="sgg != null and sgg != ''">
+		    	AND sgg = #{sgg}
+		    </if>
+		    <if test="emd != null and emd != ''">
+		        AND emd = #{emd}
+		    </if>
+			<if test="ri != null and ri != ''">
+			    AND ri = #{ri}
+		    </if>
+		    <if test="reName != null and reName != ''">
+		        AND re_name like CONCAT('%',#{reName}, '%')
+		    </if>
+		</where>
+	</select>
+	
+</mapper>

@@ -1,0 +1,1629 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.happyJ.realestate.dao.ApplyStatDao">
+	
+	<select id="userMainTotalCounts" parameterType="ApplyStatCustomDto" resultType="ApplyStatCustomDto">
+		SELECT
+			LPAD(IFNULL(SUM(1), 0), if(length(IFNULL(SUM(1), 0))> 2,length(IFNULL(SUM(1), 0)),2),0) AS totalCnt,
+			LPAD(SUM(IF(vei_status IN (0,8), 1, 0)), 
+				if(length(SUM(IF(vei_status IN (0,8), 1, 0)))> 2,length(SUM(IF(vei_status IN (0,8), 1, 0))),2) ,0) AS waitingCnt,
+			LPAD(SUM(IF(vei_status IN (1,9), 1, 0)), 
+				if(length(SUM(IF(vei_status IN (1,9), 1, 0)))> 2,length(SUM(IF(vei_status IN (1,9), 1, 0))),2),0) AS procCnt,
+			LPAD(SUM(IF(vei_status = 2, 1, 0)), 
+				if(length(SUM(IF(vei_status = 2, 1, 0)))> 2,length(SUM(IF(vei_status = 2, 1, 0))),2),0) AS allowCnt
+		FROM ves_item
+		WHERE
+			vei_status <![CDATA[<>]]> 3
+			AND vei_status <![CDATA[<]]> 100
+			<if test="userGb == 'user'">
+				AND DATE_FORMAT(req_date,'%Y-%m') = DATE_FORMAT(now(),'%Y-%m')
+			</if>
+			<if test="level != null and level != ''">
+				<if test="level != 8 and level != 9">
+					AND userid = #{userId}
+				</if>
+			</if>
+			<if test="searchStDate != null and searchStDate != '' ">
+				AND req_date BETWEEN #{searchStDate} AND #{searchEdDate}
+			</if>
+	</select>
+	
+	<select id="userMainDateGraphCounts" parameterType="ApplyStatCustomDto" resultType="ApplyStatCustomDto">
+		SELECT * 
+		FROM
+			(SELECT
+				DATE_FORMAT(req_date,'%Y.%m') AS applyDate,
+				LPAD(IFNULL(SUM(1), 0), if(length(IFNULL(SUM(1), 0))> 2,length(IFNULL(SUM(1), 0)),2),0) AS totalCnt
+				FROM ves_item
+				<where>
+					vei_status <![CDATA[<>]]> 3
+					AND vei_status <![CDATA[<]]> 100
+					<if test="level != null and level != ''">
+						<if test="level != 8 and level != 9">
+						AND userid = #{userId}
+						</if>
+					</if>
+				</where>
+				GROUP BY DATE_FORMAT(req_date,'%Y-%m') 
+				ORDER BY DATE_FORMAT(req_date,'%Y-%m') DESC limit 3
+			) a
+		ORDER BY applyDate asc
+	</select>
+	
+	<select id="userMainResultCounts" parameterType="ApplyStatCustomDto" resultType="ApplyStatCustomDto">
+		SELECT
+			IFNULL(SUM(1), 0) AS resultTotalCnt,
+			LPAD(SUM(IF(b.item_serial is null, 1, 0)),
+				if(length(SUM(IF(b.item_serial is null, 1, 0)))> 2,length(SUM(IF(b.item_serial is null, 1, 0))),2) ,0) AS notResultCnt,
+			LPAD(SUM(IF(b.item_serial is not null, 1, 0)),
+				if(length(SUM(IF(b.item_serial is not null, 1, 0)))> 2,length(SUM(IF(b.item_serial is not null, 1, 0))),2) ,0) AS resultCnt
+		FROM ves_item a
+		LEFT OUTER JOIN ves_item_result b on a.item_serial = b.item_serial and b.item_result <![CDATA[<>]]> '2'
+		WHERE
+			a.vei_status = 2 and a.vei_status <![CDATA[<>]]> 3
+			AND a.vei_limit_datetime <![CDATA[<]]> CURRENT_TIMESTAMP 
+			<if test="level != null and level != ''">
+    			<if test="level != 8 and level != 9">
+        		AND userid = #{userId}
+        		</if>
+    		</if>
+			<if test="searchStDate != null and searchStDate != '' ">
+				AND req_date BETWEEN #{searchStDate} AND #{searchEdDate}
+			</if>
+	</select>
+	
+	<select id="userMainLimitDateCounts" parameterType="ApplyStatCustomDto" resultType="ApplyStatCustomDto">
+		SELECT
+			LPAD(IFNULL(SUM(1), 0),
+				if(length(IFNULL(SUM(1), 0))> 2,length(IFNULL(SUM(1), 0)),2) ,0) AS limitDateTotalCnt
+		FROM ves_item
+		WHERE
+			vei_status <![CDATA[<>]]> 3
+			AND vei_status <![CDATA[<]]> 100
+			AND vei_limit_datetime <![CDATA[<=]]> (CURDATE() + INTERVAL 3 DAY)
+			AND vei_limit_datetime >= CURDATE()
+			<if test="level != null and level != ''">
+    			<if test="level != 8 and level != 9">
+        		AND userid = #{userId}
+        		</if>
+    		</if>
+			<if test="searchStDate != null and searchStDate != '' ">
+				AND req_date BETWEEN #{searchStDate} AND #{searchEdDate}
+			</if>
+	</select>
+	
+	<select id="userMainLimitDateList" parameterType="ApplyStatCustomDto" resultType="ApplyStatCustomDto">
+		SELECT
+			item_serial AS itemSerial,
+			video_id AS videoId,
+			DATE_FORMAT(vei_limit_datetime, '%Y.%m.%d') AS veiLimitDatetime
+		FROM ves_item
+		<where>
+			vei_status <![CDATA[<>]]> 3
+			AND vei_status <![CDATA[<]]> 100
+			AND vei_limit_datetime <![CDATA[<=]]> (CURDATE() + INTERVAL 3 DAY)
+			AND vei_limit_datetime <![CDATA[>=]]> CURDATE()
+			<if test="level != null and level != ''">
+				<if test="level != 8 and level != 9">
+					AND userid = #{userId}
+				</if>
+			</if>
+		</where>
+	</select>
+	
+	<select id="userStatSolveList" parameterType="ApplyStatCustomDto" resultType="ApplyStatCustomDto">
+		SELECT
+			'전체' AS yearCnt,
+	        SUM(1) AS totalCnt,
+			SUM(IF(b.item_result in (0,3,4), 1, 0)) AS solveCnt,
+			SUM(IF(b.item_result in (0,3,4) and b.item_use = 0, 1, 0)) AS useSolveCnt,
+			SUM(IF(b.item_result in (0,3,4) and b.item_use = 1, 1, 0)) AS notUseSolveCnt
+		FROM ves_item a
+		LEFT OUTER JOIN ves_item_result b on a.item_serial = b.item_serial 
+		WHERE
+			vei_status <![CDATA[<>]]> 3
+			AND vei_status <![CDATA[<]]> 100
+			<if test="level != null and level != ''">
+    			<if test="level != 8 and level != 9">
+        		AND userid = #{userId}
+        		</if>
+    		</if>
+			<if test="searchStDate != null and searchStDate != '' ">
+				AND req_date BETWEEN #{searchStDate} AND #{searchEdDate}
+			</if>
+			<if test="searchCrime != null and searchCrime != '' ">
+				AND req_reason_code = #{searchCrime}
+			</if> 
+			<if test="searchPosition != null and searchPosition != '' ">
+				AND position = #{searchPosition}
+			</if> 
+			<if test="searchDepart != null and searchDepart != '' ">
+				AND depart = #{searchDepart}
+			</if> 
+			<if test="searchTeam != null and searchTeam != '' ">
+				AND team = #{searchTeam}
+			</if> 	
+			<if test="searchWord != null and searchWord != '' ">
+				AND userid = #{searchWord}
+			</if> 											
+		UNION	 
+		SELECT
+			<choose>
+				<when test="dateFlag eq 'monthly'">DATE_FORMAT(a.req_date,'%Y-%m') AS yearCnt,</when>		
+				<otherwise>DATE_FORMAT(a.req_date,'%Y') AS yearCnt,</otherwise>
+			</choose>
+	        SUM(1) AS totalCnt,
+			SUM(IF(b.item_result in (0,3,4), 1, 0)) AS solveCnt,
+			SUM(IF(b.item_result in (0,3,4) and b.item_use = 0, 1, 0)) AS useSolveCnt,
+			SUM(IF(b.item_result in (0,3,4) and b.item_use = 1, 1, 0)) AS notUseSolveCnt
+		FROM ves_item a
+		LEFT OUTER JOIN ves_item_result b on a.item_serial = b.item_serial 
+		WHERE
+			vei_status <![CDATA[<>]]> 3
+			AND vei_status <![CDATA[<]]> 100
+			<if test="level != null and level != ''">
+    			<if test="level != 8 and level != 9">
+        		AND userid = #{userId}
+        		</if>
+    		</if>
+			<if test="searchStDate != null and searchStDate != '' ">
+				AND req_date BETWEEN #{searchStDate} AND #{searchEdDate}
+			</if>  
+			<if test="searchCrime != null and searchCrime != '' ">
+				AND req_reason_code = #{searchCrime}
+			</if> 
+			<if test="searchPosition != null and searchPosition != '' ">
+				AND position = #{searchPosition}
+			</if> 
+			<if test="searchDepart != null and searchDepart != '' ">
+				AND depart = #{searchDepart}
+			</if> 
+			<if test="searchTeam != null and searchTeam != '' ">
+				AND team = #{searchTeam}
+			</if> 
+			<if test="searchWord != null and searchWord != '' ">
+				AND userid = #{searchWord}
+			</if> 											
+			GROUP BY 
+			<choose>
+				<when test="dateFlag eq 'monthly'">DATE_FORMAT(a.req_date,'%Y-%m')</when>		
+				<otherwise>DATE_FORMAT(a.req_date,'%Y')</otherwise>
+			</choose>			
+	</select>			
+	
+	<select id="userStatReasonList" parameterType="ApplyStatCustomDto" resultType="ApplyStatCustomDto">
+		 SELECT '전체 미사용 건' AS codeVal,
+		     Sum(1) AS totalCnt
+		     <if test="years != null and years != '' ">
+			     <foreach collection="years" item="year" index="idx">
+			     ,SUM(IF(date_format(req_date, '%Y') = #{year}, 1, 0)) AS 'year_${idx}'
+			     </foreach>
+		     </if>
+		 FROM (SELECT a.*, b.req_date, b.req_position
+		      FROM ves_item_result a, ves_item b
+		      WHERE a.item_serial = b.item_serial
+		         AND length(b.vei_status) <![CDATA[<]]> 3
+			  <if test="level != null and level != ''">
+		    	 <if test="level != 8 and level != 9">
+		         AND userid = #{userId}
+		         </if>
+		      </if>
+		      <if test="searchCrime != null and searchCrime != '' ">
+				 AND req_reason_code = #{searchCrime}
+			  </if> 
+			  <if test="searchPosition != null and searchPosition != '' ">
+				 AND position = #{searchPosition}
+			  </if> 
+			  <if test="searchDepart != null and searchDepart != '' ">
+				 AND depart = #{searchDepart}
+			  </if> 
+			  <if test="searchTeam != null and searchTeam != '' ">
+				 AND team = #{searchTeam}
+			  </if> 
+			  <if test="searchWord != null and searchWord != '' ">
+				 AND userid = #{searchWord}
+			  </if> 			  			               
+		      ) a, ves_code b
+		  WHERE  
+		     b.code_group = 104
+		     AND a.item_use <![CDATA[<>]]> 0
+		     AND result_code <![CDATA[<>]]> '00000'
+		     AND a.result_code = b.code_key
+		     <if test="searchStDate != null and searchStDate != '' ">
+				 AND req_date BETWEEN #{searchStDate} AND #{searchEdDate}
+			 </if> 
+		  UNION
+		  	select ab.* from
+			(SELECT code_val AS codeVal,
+			      Sum(1) AS totalCnt
+			      <if test="years != null and years != '' ">
+				      <foreach collection="years" item="year" index="idx">
+				      ,SUM(IF(date_format(req_date, '%Y') = #{year}, 1, 0)) AS 'year_${idx}'	
+				      </foreach>
+			      </if>
+			  FROM (SELECT a.*, b.req_date, b.req_position
+			       FROM ves_item_result a, ves_item b
+			       WHERE a.item_serial = b.item_serial
+			       AND length(b.vei_status) <![CDATA[<]]> 3
+			       <if test="level != null and level != ''">
+			    	  <if test="level != 8 and level != 9">
+			          AND userid = #{userId}
+			          </if>
+			       </if> 
+			       <if test="searchCrime != null and searchCrime != '' ">
+					  AND req_reason_code = #{searchCrime}
+				   </if> 
+				   <if test="searchPosition != null and searchPosition != '' ">
+					  AND position = #{searchPosition}
+				   </if> 
+				   <if test="searchDepart != null and searchDepart != '' ">
+					  AND depart = #{searchDepart}
+				   </if> 
+				   <if test="searchTeam != null and searchTeam != '' ">
+					  AND team = #{searchTeam}
+				   </if> 
+				   <if test="searchWord != null and searchWord != '' ">
+					  AND userid = #{searchWord}
+				   </if> 			   	      
+			       ) a, ves_code b
+			  WHERE
+			     b.code_group = 104
+			     AND a.item_use <![CDATA[<>]]> 0
+			     AND code_key <![CDATA[<>]]> '00000'
+			     AND a.result_code = b.code_key
+			  	 <if test="searchStDate != null and searchStDate != '' ">
+					 AND req_date BETWEEN #{searchStDate} AND #{searchEdDate}
+				 </if>      
+			  GROUP BY code_val
+			  ORDER BY totalCnt DESC) ab
+	</select>	
+	
+	<select id="selectDetailEtcReasonList" parameterType="ApplyStatCustomDto" resultType="ApplyStatCustomDto">
+		SELECT * FROM (SELECT @ROWNUM := @ROWNUM +1 AS RNUM, A.* FROM (
+			SELECT a.item_serial itemSerial, a.result_memo resultMemo
+			FROM ves_item_result a, ves_item b
+			WHERE a.item_serial = b.item_serial
+			AND  a.result_code = '99999'
+			AND a.item_use &lt;&gt; 0
+			<if test="!@com.happyJ.realestate.common.util.StringUtil@isEmpty(applyYear)">
+				AND DATE_FORMAT(b.req_date, '%Y') = #{applyYear}
+			</if>
+			ORDER BY b.req_date desc
+		) A, (SELECT @ROWNUM := 0) R) TB
+		WHERE RNUM BETWEEN ((#{currentPage} - 1) * #{rowSize} + 1) AND (#{currentPage} * #{rowSize})
+	</select>
+	
+	<select id="selectDetailEtcReasonListCount" parameterType="ApplyStatCustomDto" resultType="int">
+		SELECT COUNT(a.item_serial)
+		FROM ves_item_result a, ves_item b
+		WHERE a.item_serial = b.item_serial
+		AND  a.result_code = '99999'
+		AND a.item_use &lt;&gt; 0
+		<if test="!@com.happyJ.realestate.common.util.StringUtil@isEmpty(applyYear)">
+			AND DATE_FORMAT(b.req_date, '%Y') = #{applyYear}
+		</if>
+	</select>
+	
+	<select id="userStatYears" parameterType="ApplyStatCustomDto" resultType="string"> 
+		SELECT
+			DATE_FORMAT(req_date,'%Y') AS years
+		FROM ves_item
+		WHERE
+			vei_status <![CDATA[<>]]> 3
+			AND vei_status <![CDATA[<]]> 100
+			<if test="level != null and level != ''">
+    			<if test="level != 8 and level != 9">
+        		AND userid = #{userId}
+        		</if>
+    		</if>
+			<if test="searchStDate != null and searchStDate != '' ">
+				AND req_date BETWEEN #{searchStDate} AND #{searchEdDate}
+			</if>
+			<if test="searchCrime != null and searchCrime != '' ">
+				AND req_reason_code = #{searchCrime}
+			</if> 	
+			<if test="searchPosition != null and searchPosition != '' ">
+				AND position = #{searchPosition}
+			</if> 
+			<if test="searchDepart != null and searchDepart != '' ">
+				AND depart = #{searchDepart}
+			</if> 
+			<if test="searchTeam != null and searchTeam != '' ">
+				AND team = #{searchTeam}
+			</if> 
+			<if test="searchWord != null and searchWord != '' ">
+				AND userid = #{searchWord}
+			</if> 						  
+			GROUP BY DATE_FORMAT(req_date, '%Y')
+			ORDER BY req_date ASC 	
+	</select>				
+
+	<select id="userStatAllList" parameterType="ApplyStatCustomDto" resultType="string">
+		SELECT
+	        COUNT(*) <!-- totalCnt -->
+		FROM ves_item a
+		WHERE
+			vei_status <![CDATA[<>]]> 3
+			AND vei_status <![CDATA[<]]> 100
+			<if test="level != null and level != ''">
+    			<if test="level != 8 and level != 9">
+        		AND userid = #{userId}
+        		</if>
+    		</if>
+			<if test="searchStDate != null and searchStDate != '' ">
+				AND req_date BETWEEN #{searchStDate} AND #{searchEdDate}
+			</if>
+	        <if test="searchCrime != null and searchCrime != '' ">
+			    AND req_reason_code = #{searchCrime}
+		    </if>
+			<if test="searchPosition != null and searchPosition != '' ">
+				AND position = #{searchPosition}
+			</if> 
+			<if test="searchDepart != null and searchDepart != '' ">
+				AND depart = #{searchDepart}
+			</if> 
+			<if test="searchTeam != null and searchTeam != '' ">
+				AND team = #{searchTeam}
+			</if> 
+			<if test="searchWord != null and searchWord != '' ">
+				AND userid = #{searchWord}
+			</if> 		    		     			 
+		UNION ALL	 
+		SELECT
+	        COUNT(*) <!-- notInputCnt -->
+		FROM ves_item a
+		LEFT OUTER JOIN ves_item_result b on a.item_serial = b.item_serial 
+		WHERE
+			b.item_serial is NULL 
+			AND vei_status <![CDATA[<>]]> 3
+			AND vei_status <![CDATA[<]]> 100
+			<if test="level != null and level != ''">
+    			<if test="level != 8 and level != 9">
+        		AND userid = #{userId}
+        		</if>
+    		</if>
+			<if test="searchStDate != null and searchStDate != '' ">
+				AND req_date BETWEEN #{searchStDate} AND #{searchEdDate}
+			</if>
+	        <if test="searchCrime != null and searchCrime != '' ">
+			    AND req_reason_code = #{searchCrime}
+		    </if> 
+			<if test="searchPosition != null and searchPosition != '' ">
+				AND position = #{searchPosition}
+			</if> 
+			<if test="searchDepart != null and searchDepart != '' ">
+				AND depart = #{searchDepart}
+			</if> 
+			<if test="searchTeam != null and searchTeam != '' ">
+				AND team = #{searchTeam}
+			</if> 
+			<if test="searchWord != null and searchWord != '' ">
+				AND userid = #{searchWord}
+			</if> 		    			  
+		UNION ALL	 
+		SELECT
+	        COUNT(*) <!-- inputCnt -->
+		FROM ves_item a
+		LEFT OUTER JOIN ves_item_result b on a.item_serial = b.item_serial 
+		WHERE
+			b.item_serial is NOT NULL 
+			AND a.vei_status <![CDATA[<>]]> 3
+			AND a.vei_status <![CDATA[<]]> 100
+			<if test="level != null and level != ''">
+    			<if test="level != 8 and level != 9">
+        		AND userid = #{userId}
+        		</if>
+    		</if>
+			<if test="searchStDate != null and searchStDate != '' ">
+				AND req_date BETWEEN #{searchStDate} AND #{searchEdDate}
+			</if> 
+	        <if test="searchCrime != null and searchCrime != '' ">
+			    AND req_reason_code = #{searchCrime}
+		    </if> 
+			<if test="searchPosition != null and searchPosition != '' ">
+				AND position = #{searchPosition}
+			</if> 
+			<if test="searchDepart != null and searchDepart != '' ">
+				AND depart = #{searchDepart}
+			</if> 
+			<if test="searchTeam != null and searchTeam != '' ">
+				AND team = #{searchTeam}
+			</if> 
+			<if test="searchWord != null and searchWord != '' ">
+				AND userid = #{searchWord}
+			</if> 		    			 	
+		UNION ALL	 
+		SELECT
+	        COUNT(*) <!-- inputSolveCnt -->
+		FROM ves_item a
+		LEFT OUTER JOIN ves_item_result b on a.item_serial = b.item_serial 
+		WHERE
+			b.item_result is NOT NULL 
+			AND b.item_result in (0,3,4)
+			AND a.vei_status <![CDATA[<>]]> 3
+			AND a.vei_status <![CDATA[<]]> 100
+			<if test="level != null and level != ''">
+    			<if test="level != 8 and level != 9">
+        		AND userid = #{userId}
+        		</if>
+    		</if>
+			<if test="searchStDate != null and searchStDate != '' ">
+				AND req_date BETWEEN #{searchStDate} AND #{searchEdDate}
+			</if> 
+	        <if test="searchCrime != null and searchCrime != '' ">
+			    AND req_reason_code = #{searchCrime}
+		    </if> 
+			<if test="searchPosition != null and searchPosition != '' ">
+				AND position = #{searchPosition}
+			</if> 
+			<if test="searchDepart != null and searchDepart != '' ">
+				AND depart = #{searchDepart}
+			</if> 
+			<if test="searchTeam != null and searchTeam != '' ">
+				AND team = #{searchTeam}
+			</if> 
+			<if test="searchWord != null and searchWord != '' ">
+				AND userid = #{searchWord}
+			</if>
+		UNION ALL	 
+		SELECT
+	        COUNT(*) <!-- inputSolveUseCnt -->
+		FROM ves_item a
+		LEFT OUTER JOIN ves_item_result b on a.item_serial = b.item_serial 
+		WHERE
+			b.item_result is NOT NULL 
+			AND b.item_result in (0,3,4)
+			AND b.item_use = 0
+			AND a.vei_status <![CDATA[<>]]> 3
+			AND a.vei_status <![CDATA[<]]> 100
+			<if test="level != null and level != ''">
+    			<if test="level != 8 and level != 9">
+        		AND userid = #{userId}
+        		</if>
+    		</if>
+			<if test="searchStDate != null and searchStDate != '' ">
+				AND req_date BETWEEN #{searchStDate} AND #{searchEdDate}
+			</if>  
+	        <if test="searchCrime != null and searchCrime != '' ">
+			    AND req_reason_code = #{searchCrime}
+		    </if> 
+			<if test="searchPosition != null and searchPosition != '' ">
+				AND position = #{searchPosition}
+			</if> 
+			<if test="searchDepart != null and searchDepart != '' ">
+				AND depart = #{searchDepart}
+			</if> 
+			<if test="searchTeam != null and searchTeam != '' ">
+				AND team = #{searchTeam}
+			</if> 
+			<if test="searchWord != null and searchWord != '' ">
+				AND userid = #{searchWord}
+			</if> 		    			
+		UNION ALL	 
+		SELECT
+	        COUNT(*) <!-- inputSolveNotUseCnt -->
+		FROM ves_item a
+		LEFT OUTER JOIN ves_item_result b on a.item_serial = b.item_serial 
+		WHERE
+			b.item_result is NOT NULL 
+			AND b.item_result in (0,3,4)
+			AND b.item_use = 1
+			AND a.vei_status <![CDATA[<>]]> 3
+			AND a.vei_status <![CDATA[<]]> 100
+			<if test="level != null and level != ''">
+    			<if test="level != 8 and level != 9">
+        		AND userid = #{userId}
+        		</if>
+    		</if>
+			<if test="searchStDate != null and searchStDate != '' ">
+				AND req_date BETWEEN #{searchStDate} AND #{searchEdDate}
+			</if>	
+	        <if test="searchCrime != null and searchCrime != '' ">
+			    AND req_reason_code = #{searchCrime}
+		    </if> 	
+			<if test="searchPosition != null and searchPosition != '' ">
+				AND position = #{searchPosition}
+			</if> 
+			<if test="searchDepart != null and searchDepart != '' ">
+				AND depart = #{searchDepart}
+			</if> 
+			<if test="searchTeam != null and searchTeam != '' ">
+				AND team = #{searchTeam}
+			</if> 
+			<if test="searchWord != null and searchWord != '' ">
+				AND userid = #{searchWord}
+			</if> 		    			
+		UNION ALL	 
+		SELECT
+	        COUNT(*) <!-- inputNotSolveCnt -->
+		FROM ves_item a
+		LEFT OUTER JOIN ves_item_result b on a.item_serial = b.item_serial 
+		WHERE
+			b.item_result is NOT NULL 
+			AND b.item_result = 1
+			AND a.vei_status <![CDATA[<>]]> 3
+			AND a.vei_status <![CDATA[<]]> 100
+			<if test="level != null and level != ''">
+    			<if test="level != 8 and level != 9">
+        		AND userid = #{userId}
+        		</if>
+    		</if>
+			<if test="searchStDate != null and searchStDate != '' ">
+				AND req_date BETWEEN #{searchStDate} AND #{searchEdDate}
+			</if>	
+	        <if test="searchCrime != null and searchCrime != '' ">
+			    AND req_reason_code = #{searchCrime}
+		    </if> 	
+			<if test="searchPosition != null and searchPosition != '' ">
+				AND position = #{searchPosition}
+			</if> 
+			<if test="searchDepart != null and searchDepart != '' ">
+				AND depart = #{searchDepart}
+			</if> 
+			<if test="searchTeam != null and searchTeam != '' ">
+				AND team = #{searchTeam}
+			</if> 
+			<if test="searchWord != null and searchWord != '' ">
+				AND userid = #{searchWord}
+			</if> 		    			
+		UNION ALL	 
+		SELECT
+	        COUNT(*) <!-- inputNotSolveUseCnt -->
+		FROM ves_item a
+		LEFT OUTER JOIN ves_item_result b on a.item_serial = b.item_serial 
+		WHERE
+			b.item_result is NOT NULL 
+			AND b.item_result = 1
+			AND b.item_use = 0			
+			AND a.vei_status <![CDATA[<>]]> 3
+			AND a.vei_status <![CDATA[<]]> 100
+			<if test="level != null and level != ''">
+    			<if test="level != 8 and level != 9">
+        		AND userid = #{userId}
+        		</if>
+    		</if>
+			<if test="searchStDate != null and searchStDate != '' ">
+				AND req_date BETWEEN #{searchStDate} AND #{searchEdDate}
+			</if>	
+	        <if test="searchCrime != null and searchCrime != '' ">
+			    AND req_reason_code = #{searchCrime}
+		    </if> 	
+			<if test="searchPosition != null and searchPosition != '' ">
+				AND position = #{searchPosition}
+			</if> 
+			<if test="searchDepart != null and searchDepart != '' ">
+				AND depart = #{searchDepart}
+			</if> 
+			<if test="searchTeam != null and searchTeam != '' ">
+				AND team = #{searchTeam}
+			</if> 
+			<if test="searchWord != null and searchWord != '' ">
+				AND userid = #{searchWord}
+			</if> 		    		
+		UNION ALL	 
+		SELECT
+	        COUNT(*) <!-- inputNotSolveNotUseCnt -->
+		FROM ves_item a
+		LEFT OUTER JOIN ves_item_result b on a.item_serial = b.item_serial 
+		WHERE
+			b.item_result is NOT NULL 
+			AND b.item_result = 1
+			AND b.item_use = 1			
+			AND a.vei_status <![CDATA[<>]]> 3
+			AND a.vei_status <![CDATA[<]]> 100
+			<if test="level != null and level != ''">
+    			<if test="level != 8 and level != 9">
+        		AND userid = #{userId}
+        		</if>
+    		</if>
+			<if test="searchStDate != null and searchStDate != '' ">
+				AND req_date BETWEEN #{searchStDate} AND #{searchEdDate}
+			</if>
+	        <if test="searchCrime != null and searchCrime != '' ">
+			    AND req_reason_code = #{searchCrime}
+		    </if> 		
+			<if test="searchPosition != null and searchPosition != '' ">
+				AND position = #{searchPosition}
+			</if> 
+			<if test="searchDepart != null and searchDepart != '' ">
+				AND depart = #{searchDepart}
+			</if> 
+			<if test="searchTeam != null and searchTeam != '' ">
+				AND team = #{searchTeam}
+			</if> 
+			<if test="searchWord != null and searchWord != '' ">
+				AND userid = #{searchWord}
+			</if> 		    			
+		UNION ALL	 
+		SELECT
+	        COUNT(*) <!-- inputIngCnt -->
+		FROM ves_item a
+		LEFT OUTER JOIN ves_item_result b on a.item_serial = b.item_serial 
+		WHERE
+			b.item_result is NOT NULL 
+			AND b.item_result = 2		
+			AND a.vei_status <![CDATA[<>]]> 3
+			AND a.vei_status <![CDATA[<]]> 100
+			<if test="level != null and level != ''">
+    			<if test="level != 8 and level != 9">
+        		AND userid = #{userId}
+        		</if>
+    		</if>
+			<if test="searchStDate != null and searchStDate != '' ">
+				AND req_date BETWEEN #{searchStDate} AND #{searchEdDate}
+			</if>	
+	        <if test="searchCrime != null and searchCrime != '' ">
+			    AND req_reason_code = #{searchCrime}
+		    </if> 		
+			<if test="searchPosition != null and searchPosition != '' ">
+				AND position = #{searchPosition}
+			</if> 
+			<if test="searchDepart != null and searchDepart != '' ">
+				AND depart = #{searchDepart}
+			</if> 
+			<if test="searchTeam != null and searchTeam != '' ">
+				AND team = #{searchTeam}
+			</if> 
+			<if test="searchWord != null and searchWord != '' ">
+				AND userid = #{searchWord}
+			</if> 		    	
+		UNION ALL	 
+		SELECT
+	        COUNT(*) <!-- inputIngUseCnt -->
+		FROM ves_item a
+		LEFT OUTER JOIN ves_item_result b on a.item_serial = b.item_serial 
+		WHERE
+			b.item_result is NOT NULL 
+			AND b.item_result = 2	
+			AND b.item_use = 0				
+			AND a.vei_status <![CDATA[<>]]> 3
+			AND a.vei_status <![CDATA[<]]> 100
+			<if test="level != null and level != ''">
+    			<if test="level != 8 and level != 9">
+        		AND userid = #{userId}
+        		</if>
+    		</if>
+			<if test="searchStDate != null and searchStDate != '' ">
+				AND req_date BETWEEN #{searchStDate} AND #{searchEdDate}
+			</if>	
+	        <if test="searchCrime != null and searchCrime != '' ">
+			    AND req_reason_code = #{searchCrime}
+		    </if> 	
+			<if test="searchPosition != null and searchPosition != '' ">
+				AND position = #{searchPosition}
+			</if> 
+			<if test="searchDepart != null and searchDepart != '' ">
+				AND depart = #{searchDepart}
+			</if> 
+			<if test="searchTeam != null and searchTeam != '' ">
+				AND team = #{searchTeam}
+			</if> 
+			<if test="searchWord != null and searchWord != '' ">
+				AND userid = #{searchWord}
+			</if> 		    		
+		UNION ALL	 
+		SELECT
+	        COUNT(*) <!-- inputIngNotUseCnt -->
+		FROM ves_item a
+		LEFT OUTER JOIN ves_item_result b on a.item_serial = b.item_serial 
+		WHERE
+			b.item_result is NOT NULL 
+			AND b.item_result = 2	
+			AND b.item_use = 1				
+			AND a.vei_status <![CDATA[<>]]> 3
+			AND a.vei_status <![CDATA[<]]> 100
+			<if test="level != null and level != ''">
+    			<if test="level != 8 and level != 9">
+        		AND userid = #{userId}
+        		</if>
+    		</if>
+			<if test="searchStDate != null and searchStDate != '' ">
+				AND req_date BETWEEN #{searchStDate} AND #{searchEdDate}
+			</if>
+	        <if test="searchCrime != null and searchCrime != '' ">
+			    AND req_reason_code = #{searchCrime}
+		    </if> 	
+			<if test="searchPosition != null and searchPosition != '' ">
+				AND position = #{searchPosition}
+			</if> 
+			<if test="searchDepart != null and searchDepart != '' ">
+				AND depart = #{searchDepart}
+			</if> 
+			<if test="searchTeam != null and searchTeam != '' ">
+				AND team = #{searchTeam}
+			</if> 
+			<if test="searchWord != null and searchWord != '' ">
+				AND userid = #{searchWord}
+			</if>
+		UNION ALL
+		SELECT 
+			COUNT(*) <!-- 'inputTotalSolveUse' -->
+		FROM ves_item a
+		LEFT OUTER JOIN ves_item_result b ON a.item_serial = b.item_serial WHERE b.item_serial IS NOT NULL and b.item_use = 0
+			AND a.vei_status <![CDATA[<>]]> 3
+			AND a.vei_status <![CDATA[<]]> 100
+		UNION ALL
+		SELECT
+			COUNT(*) <!-- 'inputTotalSolveNotUse' -->
+		FROM ves_item a
+		LEFT OUTER JOIN ves_item_result b ON a.item_serial = b.item_serial WHERE b.item_serial IS NOT NULL and b.item_use = 1
+			AND a.vei_status <![CDATA[<]]> 3
+			AND a.vei_status <![CDATA[<]]> 100
+	</select>
+	
+	<select id="selectPartList" parameterType="ApplyStatCustomDto" resultType="ApplyStatCustomDto">
+		SELECT	
+	        position,
+	        depart,
+	        team
+		FROM ves_item
+		WHERE 
+		<choose>
+			<when test="searchPosition != null and searchPosition != '' ">
+				<if test="searchDepart != null and searchDepart != ''">
+					position = #{searchPosition} AND depart = #{searchDepart}
+					GROUP BY team
+				</if>
+				<if test="searchDepart == null or searchDepart == ''">
+					position = #{searchPosition}
+					GROUP BY depart
+				</if>
+			</when>
+			<otherwise>
+				position is not null
+				GROUP BY position
+			</otherwise>
+		</choose>												    		
+	</select>	
+
+
+	<select id="resultStatApplyList" parameterType="ApplyStatCustomDto" resultType="ApplyStatCustomDto">
+		SELECT
+			'총계' AS yearCnt,
+			SUM(1) AS totalCnt,
+			SUM(IF(vei_status in (0,8), 1, 0)) AS waitingCnt,
+			SUM(IF(vei_status in (1,9), 1, 0)) AS procCnt,
+			SUM(IF(vei_status = 2, 1, 0)) AS allowCnt
+		FROM ves_item
+		WHERE
+			vei_status <![CDATA[<>]]> 3
+			AND vei_status <![CDATA[<]]> 100
+			<if test="level != null and level != ''">
+    			<if test="level != 8 and level != 9">
+        		AND userid = #{userId}
+        		</if>
+    		</if>
+			<if test="searchStDate != null and searchStDate != '' ">
+				AND req_date BETWEEN #{searchStDate} AND #{searchEdDate}
+			</if>
+			<if test="searchCrime != null and searchCrime != '' ">
+				AND req_reason_code = #{searchCrime}
+			</if> 
+			<if test="searchPosition != null and searchPosition != '' ">
+				AND position = #{searchPosition}
+			</if> 
+			<if test="searchDepart != null and searchDepart != '' ">
+				AND depart = #{searchDepart}
+			</if> 
+			<if test="searchTeam != null and searchTeam != '' ">
+				AND team = #{searchTeam}
+			</if> 	
+			<if test="searchWord != null and searchWord != '' ">
+				AND userid = #{searchWord}
+			</if>
+		UNION
+		SELECT
+			<choose>
+				<when test="dateFlag eq 'monthly'">DATE_FORMAT(req_date,'%Y-%m') AS yearCnt,</when>		
+				<otherwise>DATE_FORMAT(req_date,'%Y') AS yearCnt,</otherwise>
+			</choose>
+			SUM(1) AS totalCnt,
+			SUM(IF(vei_status in (0,8), 1, 0)) AS waitingCnt,
+			SUM(IF(vei_status in (1,9), 1, 0)) AS procCnt,
+			SUM(IF(vei_status = 2, 1, 0)) AS allowCnt
+		FROM ves_item 
+		WHERE
+			vei_status <![CDATA[<>]]> 3
+			AND vei_status <![CDATA[<]]> 100
+			<if test="level != null and level != ''">
+    			<if test="level != 8 and level != 9">
+        		AND userid = #{userId}
+        		</if>
+    		</if>
+			<if test="searchStDate != null and searchStDate != '' ">
+				AND req_date BETWEEN #{searchStDate} AND #{searchEdDate}
+			</if>  
+			<if test="searchCrime != null and searchCrime != '' ">
+				AND req_reason_code = #{searchCrime}
+			</if> 
+			<if test="searchPosition != null and searchPosition != '' ">
+				AND position = #{searchPosition}
+			</if> 
+			<if test="searchDepart != null and searchDepart != '' ">
+				AND depart = #{searchDepart}
+			</if> 
+			<if test="searchTeam != null and searchTeam != '' ">
+				AND team = #{searchTeam}
+			</if> 
+			<if test="searchWord != null and searchWord != '' ">
+				AND userid = #{searchWord}
+			</if>
+			GROUP BY 
+			<choose>
+				<when test="dateFlag eq 'monthly'">DATE_FORMAT(req_date,'%Y-%m')</when>		
+				<otherwise>DATE_FORMAT(req_date,'%Y')</otherwise>
+			</choose>
+	</select>
+
+	<select id="resultStatPositionList" parameterType="ApplyStatCustomDto" resultType="ApplyStatCustomDto">
+		 SELECT '총계' AS position,
+		     Sum(1) AS totalCnt
+		     <if test="years != null and years != '' ">
+			     <foreach collection="years" item="year" index="idx">
+			     ,SUM(IF(date_format(req_date, '%Y') = #{year}, 1, 0)) AS 'year_${idx}'
+			     </foreach>
+		     </if>
+		 FROM ves_item
+		      WHERE vei_status <![CDATA[<>]]> 3
+				AND vei_status <![CDATA[<]]> 100
+			  <if test="level != null and level != ''">
+		    	 <if test="level != 8 and level != 9">
+		         AND userid = #{userId}
+		         </if>
+		      </if>
+		      <if test="searchStDate != null and searchStDate != '' ">
+				 AND req_date BETWEEN #{searchStDate} AND #{searchEdDate}
+			  </if> 		      
+		      <if test="searchCrime != null and searchCrime != '' ">
+				 AND req_reason_code = #{searchCrime}
+			  </if> 
+			  <if test="searchPosition != null and searchPosition != '' ">
+				 AND position = #{searchPosition}
+			  </if> 
+			  <if test="searchDepart != null and searchDepart != '' ">
+				 AND depart = #{searchDepart}
+			  </if> 
+			  <if test="searchTeam != null and searchTeam != '' ">
+				 AND team = #{searchTeam}
+			  </if> 
+			  <if test="searchWord != null and searchWord != '' ">
+				 AND userid = #{searchWord}
+			  </if> 			  			               
+		  UNION
+		  SELECT position,
+		      Sum(1) AS totalCnt
+		      <if test="years != null and years != '' ">
+			      <foreach collection="years" item="year" index="idx">
+			      ,SUM(IF(date_format(req_date, '%Y') = #{year}, 1, 0)) AS 'year_${idx}'	
+			      </foreach>
+		      </if>
+		  FROM ves_item
+		      WHERE vei_status <![CDATA[<>]]> 3
+				AND vei_status <![CDATA[<]]> 100
+			  <if test="level != null and level != ''">
+		    	 <if test="level != 8 and level != 9">
+		         AND userid = #{userId}
+		         </if>
+		      </if>
+		      <if test="searchStDate != null and searchStDate != '' ">
+				 AND req_date BETWEEN #{searchStDate} AND #{searchEdDate}
+			  </if> 		      
+		      <if test="searchCrime != null and searchCrime != '' ">
+				 AND req_reason_code = #{searchCrime}
+			  </if> 
+			  <if test="searchPosition != null and searchPosition != '' ">
+				 AND position = #{searchPosition}
+			  </if> 
+			  <if test="searchDepart != null and searchDepart != '' ">
+				 AND depart = #{searchDepart}
+			  </if> 
+			  <if test="searchTeam != null and searchTeam != '' ">
+				 AND team = #{searchTeam}
+			  </if> 
+			  <if test="searchWord != null and searchWord != '' ">
+				 AND userid = #{searchWord}
+			  </if> 		      
+		  GROUP BY position
+		  ORDER BY totalCnt DESC
+	</select>
+
+	<select id="resultStatDepartList" parameterType="ApplyStatCustomDto" resultType="ApplyStatCustomDto">
+		 SELECT '총계' AS depart,
+		     Sum(1) AS totalCnt
+		     <if test="years != null and years != '' ">
+			     <foreach collection="years" item="year" index="idx">
+			     ,SUM(IF(date_format(req_date, '%Y') = #{year}, 1, 0)) AS 'year_${idx}'
+			     </foreach>
+		     </if>
+		 FROM ves_item
+		      WHERE vei_status <![CDATA[<>]]> 3
+				AND vei_status <![CDATA[<]]> 100
+			  <if test="level != null and level != ''">
+		    	 <if test="level != 8 and level != 9">
+		         AND userid = #{userId}
+		         </if>
+		      </if>
+		      <if test="searchStDate != null and searchStDate != '' ">
+				 AND req_date BETWEEN #{searchStDate} AND #{searchEdDate}
+			  </if> 		      
+		      <if test="searchCrime != null and searchCrime != '' ">
+				 AND req_reason_code = #{searchCrime}
+			  </if> 
+			  <if test="searchPosition != null and searchPosition != '' ">
+				 AND position = #{searchPosition}
+			  </if> 
+			  <if test="searchDepart != null and searchDepart != '' ">
+				 AND depart = #{searchDepart}
+			  </if> 
+			  <if test="searchTeam != null and searchTeam != '' ">
+				 AND team = #{searchTeam}
+			  </if> 
+			  <if test="searchWord != null and searchWord != '' ">
+				 AND userid = #{searchWord}
+			  </if> 			  			               
+		  UNION
+		  SELECT depart,
+		      Sum(1) AS totalCnt
+		      <if test="years != null and years != '' ">
+			      <foreach collection="years" item="year" index="idx">
+			      ,SUM(IF(date_format(req_date, '%Y') = #{year}, 1, 0)) AS 'year_${idx}'	
+			      </foreach>
+		      </if>
+		  FROM ves_item
+		      WHERE vei_status <![CDATA[<>]]> 3
+				AND vei_status <![CDATA[<]]> 100
+			  <if test="level != null and level != ''">
+		    	 <if test="level != 8 and level != 9">
+		         AND userid = #{userId}
+		         </if>
+		      </if>
+		      <if test="searchStDate != null and searchStDate != '' ">
+				 AND req_date BETWEEN #{searchStDate} AND #{searchEdDate}
+			  </if> 		      
+		      <if test="searchCrime != null and searchCrime != '' ">
+				 AND req_reason_code = #{searchCrime}
+			  </if> 
+			  <if test="searchPosition != null and searchPosition != '' ">
+				 AND position = #{searchPosition}
+			  </if> 
+			  <if test="searchDepart != null and searchDepart != '' ">
+				 AND depart = #{searchDepart}
+			  </if> 
+			  <if test="searchTeam != null and searchTeam != '' ">
+				 AND team = #{searchTeam}
+			  </if> 
+			  <if test="searchWord != null and searchWord != '' ">
+				 AND userid = #{searchWord}
+			  </if> 		      
+		  GROUP BY depart
+		  ORDER BY totalCnt DESC
+	</select>	
+		
+	<select id="resultStatUserList" parameterType="ApplyStatCustomDto" resultType="ApplyStatCustomDto">
+		 SELECT '총계' AS userId,
+		     Sum(1) AS totalCnt
+		     <if test="years != null and years != '' ">
+			     <foreach collection="years" item="year" index="idx">
+			     ,SUM(IF(date_format(req_date, '%Y') = #{year}, 1, 0)) AS 'year_${idx}'
+			     </foreach>
+		     </if>
+		 FROM ves_item
+		      WHERE vei_status <![CDATA[<>]]> 3
+				AND vei_status <![CDATA[<]]> 100
+			  <if test="level != null and level != ''">
+		    	 <if test="level != 8 and level != 9">
+		         AND userid = #{userId}
+		         </if>
+		      </if>
+		      <if test="searchStDate != null and searchStDate != '' ">
+				 AND req_date BETWEEN #{searchStDate} AND #{searchEdDate}
+			  </if> 		      
+		      <if test="searchCrime != null and searchCrime != '' ">
+				 AND req_reason_code = #{searchCrime}
+			  </if> 
+			  <if test="searchPosition != null and searchPosition != '' ">
+				 AND position = #{searchPosition}
+			  </if> 
+			  <if test="searchDepart != null and searchDepart != '' ">
+				 AND depart = #{searchDepart}
+			  </if> 
+			  <if test="searchTeam != null and searchTeam != '' ">
+				 AND team = #{searchTeam}
+			  </if> 
+			  <if test="searchWord != null and searchWord != '' ">
+				 AND userid = #{searchWord}
+			  </if> 			  			               
+		  UNION
+		  SELECT userid AS userId,
+		      Sum(1) AS totalCnt
+		      <if test="years != null and years != '' ">
+			      <foreach collection="years" item="year" index="idx">
+			      ,SUM(IF(date_format(req_date, '%Y') = #{year}, 1, 0)) AS 'year_${idx}'	
+			      </foreach>
+		      </if>
+		  FROM ves_item
+		      WHERE vei_status <![CDATA[<>]]> 3
+				AND vei_status <![CDATA[<]]> 100
+			  <if test="level != null and level != ''">
+		    	 <if test="level != 8 and level != 9">
+		         AND userid = #{userId}
+		         </if>
+		      </if>
+		      <if test="searchStDate != null and searchStDate != '' ">
+				 AND req_date BETWEEN #{searchStDate} AND #{searchEdDate}
+			  </if> 		      
+		      <if test="searchCrime != null and searchCrime != '' ">
+				 AND req_reason_code = #{searchCrime}
+			  </if> 
+			  <if test="searchPosition != null and searchPosition != '' ">
+				 AND position = #{searchPosition}
+			  </if> 
+			  <if test="searchDepart != null and searchDepart != '' ">
+				 AND depart = #{searchDepart}
+			  </if> 
+			  <if test="searchTeam != null and searchTeam != '' ">
+				 AND team = #{searchTeam}
+			  </if> 
+			  <if test="searchWord != null and searchWord != '' ">
+				 AND userid = #{searchWord}
+			  </if> 		      
+		  GROUP BY userid
+		  ORDER BY totalCnt DESC
+	</select>
+	
+	<select id="resultStatCrimeList" parameterType="ApplyStatCustomDto" resultType="ApplyStatCustomDto">
+		SELECT
+			'총계' AS yearCnt,
+	        SUM(1) AS totalCnt,
+			SUM(IF(b.item_result in (0,3,4), 1, 0)) AS totalSolveCnt,
+			SUM(IF(b.item_result = '1', 1, 0)) AS totalNotSolveCnt,
+			SUM(IF(b.item_result = '2', 1, 0)) AS totalIngCnt,
+			SUM(IF(b.item_result is NULL, 1, 0)) AS totalNotAnswerCnt,
+			SUM(IF(a.req_reason_code = '10001', 1, 0)) AS murderCnt,
+			SUM(IF(a.req_reason_code = '10001', 1, 0) AND IF(b.item_result in (0,3,4), 1, 0)) AS murderSolveCnt,
+			SUM(IF(a.req_reason_code = '10001', 1, 0) AND IF(b.item_result = '1', 1, 0)) AS murderNotSolveCnt,
+			SUM(IF(a.req_reason_code = '10001', 1, 0) AND IF(b.item_result = '2', 1, 0)) AS murderIngCnt,
+			SUM(IF(a.req_reason_code = '10001', 1, 0) AND IF(b.item_result is NULL, 1, 0)) AS murderNotAnswerCnt,
+			SUM(IF(a.req_reason_code = '10002', 1, 0)) AS robberCnt,
+			SUM(IF(a.req_reason_code = '10002', 1, 0) AND IF(b.item_result in (0,3,4), 1, 0)) AS robberSolveCnt,
+			SUM(IF(a.req_reason_code = '10002', 1, 0) AND IF(b.item_result = '1', 1, 0)) AS robberNotSolveCnt,
+			SUM(IF(a.req_reason_code = '10002', 1, 0) AND IF(b.item_result = '2', 1, 0)) AS robberIngCnt,
+			SUM(IF(a.req_reason_code = '10002', 1, 0) AND IF(b.item_result is NULL, 1, 0)) AS robberNotAnswerCnt,
+			SUM(IF(a.req_reason_code = '10003', 1, 0)) AS rapeCnt,
+			SUM(IF(a.req_reason_code = '10003', 1, 0) AND IF(b.item_result in (0,3,4), 1, 0)) AS rapeSolveCnt,
+			SUM(IF(a.req_reason_code = '10003', 1, 0) AND IF(b.item_result = '1', 1, 0)) AS rapeNotSolveCnt,
+			SUM(IF(a.req_reason_code = '10003', 1, 0) AND IF(b.item_result = '2', 1, 0)) AS rapeIngCnt,
+			SUM(IF(a.req_reason_code = '10003', 1, 0) AND IF(b.item_result is NULL, 1, 0)) AS rapeNotAnswerCnt,
+			SUM(IF(a.req_reason_code = '10004', 1, 0)) AS theftCnt,
+			SUM(IF(a.req_reason_code = '10004', 1, 0) AND IF(b.item_result in (0,3,4), 1, 0)) AS theftSolveCnt,
+			SUM(IF(a.req_reason_code = '10004', 1, 0) AND IF(b.item_result = '1', 1, 0)) AS theftNotSolveCnt,
+			SUM(IF(a.req_reason_code = '10004', 1, 0) AND IF(b.item_result = '2', 1, 0)) AS theftIngCnt,
+			SUM(IF(a.req_reason_code = '10004', 1, 0) AND IF(b.item_result is NULL, 1, 0)) AS theftNotAnswerCnt,		
+			SUM(IF(a.req_reason_code = '10005', 1, 0)) AS violenceCnt,
+			SUM(IF(a.req_reason_code = '10005', 1, 0) AND IF(b.item_result in (0,3,4), 1, 0)) AS violenceSolveCnt,
+			SUM(IF(a.req_reason_code = '10005', 1, 0) AND IF(b.item_result = '1', 1, 0)) AS violenceNotSolveCnt,
+			SUM(IF(a.req_reason_code = '10005', 1, 0) AND IF(b.item_result = '2', 1, 0)) AS violenceIngCnt,
+			SUM(IF(a.req_reason_code = '10005', 1, 0) AND IF(b.item_result is NULL, 1, 0)) AS violenceNotAnswerCnt,
+			SUM(IF(a.req_reason_code = '10006', 1, 0)) AS accidentCnt,
+			SUM(IF(a.req_reason_code = '10006', 1, 0) AND IF(b.item_result in (0,3,4), 1, 0)) AS accidentSolveCnt,
+			SUM(IF(a.req_reason_code = '10006', 1, 0) AND IF(b.item_result = '1', 1, 0)) AS accidentNotSolveCnt,
+			SUM(IF(a.req_reason_code = '10006', 1, 0) AND IF(b.item_result = '2', 1, 0)) AS accidentIngCnt,
+			SUM(IF(a.req_reason_code = '10006', 1, 0) AND IF(b.item_result is NULL, 1, 0)) AS accidentNotAnswerCnt,
+			SUM(IF(a.req_reason_code = '10007', 1, 0)) AS destroyCnt,
+			SUM(IF(a.req_reason_code = '10007', 1, 0) AND IF(b.item_result in (0,3,4), 1, 0)) AS destroySolveCnt,
+			SUM(IF(a.req_reason_code = '10007', 1, 0) AND IF(b.item_result = '1', 1, 0)) AS destroyNotSolveCnt,
+			SUM(IF(a.req_reason_code = '10007', 1, 0) AND IF(b.item_result = '2', 1, 0)) AS destroyIngCnt,
+			SUM(IF(a.req_reason_code = '10007', 1, 0) AND IF(b.item_result is NULL, 1, 0)) AS destroyNotAnswerCnt,		
+			SUM(IF(a.req_reason_code = '99999', 1, 0)) AS etcCnt,
+			SUM(IF(a.req_reason_code = '99999', 1, 0) AND IF(b.item_result in (0,3,4), 1, 0)) AS etcSolveCnt,
+			SUM(IF(a.req_reason_code = '99999', 1, 0) AND IF(b.item_result = '1', 1, 0)) AS etcNotSolveCnt,
+			SUM(IF(a.req_reason_code = '99999', 1, 0) AND IF(b.item_result = '2', 1, 0)) AS etcIngCnt,
+			SUM(IF(a.req_reason_code = '99999', 1, 0) AND IF(b.item_result is NULL, 1, 0)) AS etcNotAnswerCnt								
+		FROM ves_item a
+		LEFT OUTER JOIN ves_item_result b on a.item_serial = b.item_serial 
+		WHERE
+			a.vei_status <![CDATA[<>]]> 3
+			AND a.vei_status <![CDATA[<]]> 100
+			<if test="level != null and level != ''">
+    			<if test="level != 8 and level != 9">
+        		AND userid = #{userId}
+        		</if>
+    		</if>
+			<if test="searchStDate != null and searchStDate != '' ">
+				AND req_date BETWEEN #{searchStDate} AND #{searchEdDate}
+			</if>
+			<if test="searchCrime != null and searchCrime != '' ">
+				AND req_reason_code = #{searchCrime}
+			</if> 
+			<if test="searchPosition != null and searchPosition != '' ">
+				AND position = #{searchPosition}
+			</if> 
+			<if test="searchDepart != null and searchDepart != '' ">
+				AND depart = #{searchDepart}
+			</if> 
+			<if test="searchTeam != null and searchTeam != '' ">
+				AND team = #{searchTeam}
+			</if> 	
+			<if test="searchWord != null and searchWord != '' ">
+				AND userid = #{searchWord}
+			</if> 											
+		UNION	 
+		SELECT
+			<choose>
+				<when test="dateFlag eq 'monthly'">DATE_FORMAT(req_date,'%Y-%m') AS yearCnt,</when>		
+				<otherwise>DATE_FORMAT(req_date,'%Y') AS yearCnt,</otherwise>
+			</choose>
+	        SUM(1) AS totalCnt,
+			SUM(IF(b.item_result in (0,3,4), 1, 0)) AS totalSolveCnt,
+			SUM(IF(b.item_result = '1', 1, 0)) AS totalNotSolveCnt,
+			SUM(IF(b.item_result = '2', 1, 0)) AS totalIngCnt,
+			SUM(IF(b.item_result is NULL, 1, 0)) AS totalNotAnswerCnt,
+			SUM(IF(a.req_reason_code = '10001', 1, 0)) AS murderCnt,
+			SUM(IF(a.req_reason_code = '10001', 1, 0) AND IF(b.item_result in (0,3,4), 1, 0)) AS murderSolveCnt,
+			SUM(IF(a.req_reason_code = '10001', 1, 0) AND IF(b.item_result = '1', 1, 0)) AS murderNotSolveCnt,
+			SUM(IF(a.req_reason_code = '10001', 1, 0) AND IF(b.item_result = '2', 1, 0)) AS murderIngCnt,
+			SUM(IF(a.req_reason_code = '10001', 1, 0) AND IF(b.item_result is NULL, 1, 0)) AS murderNotAnswerCnt,
+			SUM(IF(a.req_reason_code = '10002', 1, 0)) AS robberCnt,
+			SUM(IF(a.req_reason_code = '10002', 1, 0) AND IF(b.item_result in (0,3,4), 1, 0)) AS robberSolveCnt,
+			SUM(IF(a.req_reason_code = '10002', 1, 0) AND IF(b.item_result = '1', 1, 0)) AS robberNotSolveCnt,
+			SUM(IF(a.req_reason_code = '10002', 1, 0) AND IF(b.item_result = '2', 1, 0)) AS robberIngCnt,
+			SUM(IF(a.req_reason_code = '10002', 1, 0) AND IF(b.item_result is NULL, 1, 0)) AS robberNotAnswerCnt,
+			SUM(IF(a.req_reason_code = '10003', 1, 0)) AS rapeCnt,
+			SUM(IF(a.req_reason_code = '10003', 1, 0) AND IF(b.item_result in (0,3,4), 1, 0)) AS rapeSolveCnt,
+			SUM(IF(a.req_reason_code = '10003', 1, 0) AND IF(b.item_result = '1', 1, 0)) AS rapeNotSolveCnt,
+			SUM(IF(a.req_reason_code = '10003', 1, 0) AND IF(b.item_result = '2', 1, 0)) AS rapeIngCnt,
+			SUM(IF(a.req_reason_code = '10003', 1, 0) AND IF(b.item_result is NULL, 1, 0)) AS rapeNotAnswerCnt,
+			SUM(IF(a.req_reason_code = '10004', 1, 0)) AS theftCnt,
+			SUM(IF(a.req_reason_code = '10004', 1, 0) AND IF(b.item_result in (0,3,4), 1, 0)) AS theftSolveCnt,
+			SUM(IF(a.req_reason_code = '10004', 1, 0) AND IF(b.item_result = '1', 1, 0)) AS theftNotSolveCnt,
+			SUM(IF(a.req_reason_code = '10004', 1, 0) AND IF(b.item_result = '2', 1, 0)) AS theftIngCnt,
+			SUM(IF(a.req_reason_code = '10004', 1, 0) AND IF(b.item_result is NULL, 1, 0)) AS theftNotAnswerCnt,		
+			SUM(IF(a.req_reason_code = '10005', 1, 0)) AS violenceCnt,
+			SUM(IF(a.req_reason_code = '10005', 1, 0) AND IF(b.item_result in (0,3,4), 1, 0)) AS violenceSolveCnt,
+			SUM(IF(a.req_reason_code = '10005', 1, 0) AND IF(b.item_result = '1', 1, 0)) AS violenceNotSolveCnt,
+			SUM(IF(a.req_reason_code = '10005', 1, 0) AND IF(b.item_result = '2', 1, 0)) AS violenceIngCnt,
+			SUM(IF(a.req_reason_code = '10005', 1, 0) AND IF(b.item_result is NULL, 1, 0)) AS violenceNotAnswerCnt,
+			SUM(IF(a.req_reason_code = '10006', 1, 0)) AS accidentCnt,
+			SUM(IF(a.req_reason_code = '10006', 1, 0) AND IF(b.item_result in (0,3,4), 1, 0)) AS accidentSolveCnt,
+			SUM(IF(a.req_reason_code = '10006', 1, 0) AND IF(b.item_result = '1', 1, 0)) AS accidentNotSolveCnt,
+			SUM(IF(a.req_reason_code = '10006', 1, 0) AND IF(b.item_result = '2', 1, 0)) AS accidentIngCnt,
+			SUM(IF(a.req_reason_code = '10006', 1, 0) AND IF(b.item_result is NULL, 1, 0)) AS accidentNotAnswerCnt,
+			SUM(IF(a.req_reason_code = '10007', 1, 0)) AS destroyCnt,
+			SUM(IF(a.req_reason_code = '10007', 1, 0) AND IF(b.item_result in (0,3,4), 1, 0)) AS destroySolveCnt,
+			SUM(IF(a.req_reason_code = '10007', 1, 0) AND IF(b.item_result = '1', 1, 0)) AS destroyNotSolveCnt,
+			SUM(IF(a.req_reason_code = '10007', 1, 0) AND IF(b.item_result = '2', 1, 0)) AS destroyIngCnt,
+			SUM(IF(a.req_reason_code = '10007', 1, 0) AND IF(b.item_result is NULL, 1, 0)) AS destroyNotAnswerCnt,		
+			SUM(IF(a.req_reason_code = '99999', 1, 0)) AS etcCnt,
+			SUM(IF(a.req_reason_code = '99999', 1, 0) AND IF(b.item_result in (0,3,4), 1, 0)) AS etcSolveCnt,
+			SUM(IF(a.req_reason_code = '99999', 1, 0) AND IF(b.item_result = '1', 1, 0)) AS etcNotSolveCnt,
+			SUM(IF(a.req_reason_code = '99999', 1, 0) AND IF(b.item_result = '2', 1, 0)) AS etcIngCnt,
+			SUM(IF(a.req_reason_code = '99999', 1, 0) AND IF(b.item_result is NULL, 1, 0)) AS etcNotAnswerCnt
+		FROM ves_item a
+		LEFT OUTER JOIN ves_item_result b on a.item_serial = b.item_serial 
+		WHERE
+			a.vei_status <![CDATA[<>]]> 3
+			AND a.vei_status <![CDATA[<]]> 100
+			<if test="level != null and level != ''">
+    			<if test="level != 8 and level != 9">
+        		AND userid = #{userId}
+        		</if>
+    		</if>
+			<if test="searchStDate != null and searchStDate != '' ">
+				AND req_date BETWEEN #{searchStDate} AND #{searchEdDate}
+			</if>  
+			<if test="searchCrime != null and searchCrime != '' ">
+				AND req_reason_code = #{searchCrime}
+			</if> 
+			<if test="searchPosition != null and searchPosition != '' ">
+				AND position = #{searchPosition}
+			</if> 
+			<if test="searchDepart != null and searchDepart != '' ">
+				AND depart = #{searchDepart}
+			</if> 
+			<if test="searchTeam != null and searchTeam != '' ">
+				AND team = #{searchTeam}
+			</if> 
+			<if test="searchWord != null and searchWord != '' ">
+				AND userid = #{searchWord}
+			</if> 											
+			GROUP BY 
+			<choose>
+				<when test="dateFlag eq 'monthly'">DATE_FORMAT(req_date,'%Y-%m')</when>		
+				<otherwise>DATE_FORMAT(req_date,'%Y')</otherwise>
+			</choose>			
+	</select>	
+	
+	<select id="resultStatApprTimeList" parameterType="ApplyStatCustomDto" resultType="ApplyStatCustomDto">
+		SELECT
+			'전체' AS yearCnt,
+	        CONCAT(SEC_TO_TIME(MAX(TIMESTAMPDIFF(SECOND, req_date, approval_date)))) AS maxVal,
+	        CONCAT(SEC_TO_TIME(MIN(TIMESTAMPDIFF(SECOND, req_date, approval_date)))) AS minVal,
+	        CONCAT(SEC_TO_TIME(ROUND(AVG(TIMESTAMPDIFF(SECOND, req_date, approval_date))))) AS avgVal
+		FROM ves_item
+		WHERE
+			<!-- 승인처리 된 상태 값  -->
+			vei_status = 2
+			AND req_date IS NOT NULL AND approval_date IS NOT NULL
+			<if test="level != null and level != ''">
+    			<if test="level != 8 and level != 9">
+        		AND userid = #{userId}
+        		</if>
+    		</if>
+			<if test="searchStDate != null and searchStDate != '' ">
+				AND req_date BETWEEN #{searchStDate} AND #{searchEdDate}
+			</if>
+			<if test="searchCrime != null and searchCrime != '' ">
+				AND req_reason_code = #{searchCrime}
+			</if> 
+			<if test="searchPosition != null and searchPosition != '' ">
+				AND position = #{searchPosition}
+			</if> 
+			<if test="searchDepart != null and searchDepart != '' ">
+				AND depart = #{searchDepart}
+			</if> 
+			<if test="searchTeam != null and searchTeam != '' ">
+				AND team = #{searchTeam}
+			</if> 	
+			<if test="searchWord != null and searchWord != '' ">
+				AND userid = #{searchWord}
+			</if> 											
+		UNION	 
+		SELECT
+			<choose>
+				<when test="dateFlag eq 'monthly'">DATE_FORMAT(req_date,'%Y-%m') AS yearCnt,</when>		
+				<otherwise>DATE_FORMAT(req_date,'%Y') AS yearCnt,</otherwise>
+			</choose>
+	        CONCAT(SEC_TO_TIME(MAX(TIMESTAMPDIFF(SECOND, req_date, approval_date)))) AS maxVal,
+	        CONCAT(SEC_TO_TIME(MIN(TIMESTAMPDIFF(SECOND, req_date, approval_date)))) AS minVal,
+	        CONCAT(SEC_TO_TIME(ROUND(AVG(TIMESTAMPDIFF(SECOND, req_date, approval_date))))) AS avgVal
+		FROM ves_item 
+		WHERE
+			<!-- 승인처리 된 상태 값  -->
+			vei_status = 2
+			AND req_date IS NOT NULL AND approval_date IS NOT NULL
+			<if test="level != null and level != ''">
+    			<if test="level != 8 and level != 9">
+        		AND userid = #{userId}
+        		</if>
+    		</if>
+			<if test="searchStDate != null and searchStDate != '' ">
+				AND req_date BETWEEN #{searchStDate} AND #{searchEdDate}
+			</if>  
+			<if test="searchCrime != null and searchCrime != '' ">
+				AND req_reason_code = #{searchCrime}
+			</if> 
+			<if test="searchPosition != null and searchPosition != '' ">
+				AND position = #{searchPosition}
+			</if> 
+			<if test="searchDepart != null and searchDepart != '' ">
+				AND depart = #{searchDepart}
+			</if> 
+			<if test="searchTeam != null and searchTeam != '' ">
+				AND team = #{searchTeam}
+			</if> 
+			<if test="searchWord != null and searchWord != '' ">
+				AND userid = #{searchWord}
+			</if> 											
+			GROUP BY 
+			<choose>
+				<when test="dateFlag eq 'monthly'">DATE_FORMAT(req_date,'%Y-%m')</when>		
+				<otherwise>DATE_FORMAT(req_date,'%Y')</otherwise>
+			</choose>			
+	</select>		
+
+	<select id="resultStatPlayList" parameterType="ApplyStatCustomDto" resultType="ApplyStatCustomDto">
+		SELECT
+			'전체' AS yearCnt,
+	        MAX(c.totalCnt) AS maxVal,
+	        MIN(c.totalCnt) AS minVal,
+	        ROUND(AVG(c.totalCnt)) AS avgVal
+		FROM ( SELECT a.item_serial, COUNT(a.log_serial) AS totalCnt, 
+				b.userid, b.req_date, b.req_reason_code, b.position, b.depart, b.team
+				FROM ves_log a, ves_item b
+				WHERE a.item_serial = b.item_serial
+				GROUP BY a.item_serial
+			) c
+		WHERE 1 =1
+			<if test="level != null and level != ''">
+    			<if test="level != 8 and level != 9">
+        		AND c.userid = #{userId}
+        		</if>
+    		</if>
+			<if test="searchStDate != null and searchStDate != '' ">
+				AND c.req_date BETWEEN #{searchStDate} AND #{searchEdDate}
+			</if>
+			<if test="searchCrime != null and searchCrime != '' ">
+				AND c.req_reason_code = #{searchCrime}
+			</if> 
+			<if test="searchPosition != null and searchPosition != '' ">
+				AND c.position = #{searchPosition}
+			</if> 
+			<if test="searchDepart != null and searchDepart != '' ">
+				AND c.depart = #{searchDepart}
+			</if> 
+			<if test="searchTeam != null and searchTeam != '' ">
+				AND c.team = #{searchTeam}
+			</if> 	
+			<if test="searchWord != null and searchWord != '' ">
+				AND c.userid = #{searchWord}
+			</if> 	  										
+		UNION	 
+		SELECT
+			<choose>
+				<when test="dateFlag eq 'monthly'">DATE_FORMAT(c.req_date,'%Y-%m') AS yearCnt,</when>		
+				<otherwise>DATE_FORMAT(c.req_date,'%Y') AS yearCnt,</otherwise>
+			</choose>
+	        MAX(c.totalCnt) AS maxVal,
+	        MIN(c.totalCnt) AS minVal,
+	        ROUND(AVG(c.totalCnt)) AS avgVal
+		FROM ( SELECT a.item_serial, COUNT(a.log_serial) AS totalCnt, 
+				b.userid, b.req_date, b.req_reason_code, b.position, b.depart, b.team
+				FROM ves_log a, ves_item b
+				WHERE a.item_serial = b.item_serial
+				GROUP BY a.item_serial
+			) c
+		WHERE 1 =1
+			<if test="level != null and level != ''">
+    			<if test="level != 8 and level != 9">
+        		AND c.userid = #{userId}
+        		</if>
+    		</if>
+			<if test="searchStDate != null and searchStDate != '' ">
+				AND c.req_date BETWEEN #{searchStDate} AND #{searchEdDate}
+			</if>  
+			<if test="searchCrime != null and searchCrime != '' ">
+				AND c.req_reason_code = #{searchCrime}
+			</if> 
+			<if test="searchPosition != null and searchPosition != '' ">
+				AND c.position = #{searchPosition}
+			</if> 
+			<if test="searchDepart != null and searchDepart != '' ">
+				AND c.depart = #{searchDepart}
+			</if> 
+			<if test="searchTeam != null and searchTeam != '' ">
+				AND c.team = #{searchTeam}
+			</if> 
+			<if test="searchWord != null and searchWord != '' ">
+				AND c.userid = #{searchWord}
+			</if>
+			GROUP BY 
+			<choose>
+				<when test="dateFlag eq 'monthly'">DATE_FORMAT(c.req_date,'%Y-%m')</when>		
+				<otherwise>DATE_FORMAT(c.req_date,'%Y')</otherwise>
+			</choose>	
+	</select>	
+	
+	<select id="resultStatVolumeList" parameterType="ApplyStatCustomDto" resultType="ApplyStatCustomDto">
+		SELECT
+			'전체' AS yearCnt,
+	        MAX(fileupload_vol) AS maxVal,
+	        MIN(fileupload_vol) AS minVal,
+	        ROUND(AVG(fileupload_vol)) AS avgVal
+		FROM ves_item
+		WHERE
+			<!-- 승인처리 된 상태 값  -->
+			vei_status  = 2
+			AND fileupload_vol <![CDATA[<>]]> '0'
+			<if test="level != null and level != ''">
+    			<if test="level != 8 and level != 9">
+        		AND userid = #{userId}
+        		</if>
+    		</if>
+			<if test="searchStDate != null and searchStDate != '' ">
+				AND req_date BETWEEN #{searchStDate} AND #{searchEdDate}
+			</if>
+			<if test="searchCrime != null and searchCrime != '' ">
+				AND req_reason_code = #{searchCrime}
+			</if> 
+			<if test="searchPosition != null and searchPosition != '' ">
+				AND position = #{searchPosition}
+			</if> 
+			<if test="searchDepart != null and searchDepart != '' ">
+				AND depart = #{searchDepart}
+			</if> 
+			<if test="searchTeam != null and searchTeam != '' ">
+				AND team = #{searchTeam}
+			</if> 	
+			<if test="searchWord != null and searchWord != '' ">
+				AND userid = #{searchWord}
+			</if> 											
+		UNION	 
+		SELECT
+			<choose>
+				<when test="dateFlag eq 'monthly'">DATE_FORMAT(req_date,'%Y-%m') AS yearCnt,</when>		
+				<otherwise>DATE_FORMAT(req_date,'%Y') AS yearCnt,</otherwise>
+			</choose>
+	        MAX(fileupload_vol) AS maxVal,
+	        MIN(fileupload_vol) AS minVal,
+	        ROUND(AVG(fileupload_vol)) AS avgVal
+		FROM ves_item 
+		WHERE
+			<!-- 승인처리 된 상태 값  -->
+			vei_status = 2 
+			AND fileupload_vol <![CDATA[<>]]> '0'
+			<if test="level != null and level != ''">
+    			<if test="level != 8 and level != 9">
+        		AND userid = #{userId}
+        		</if>
+    		</if>
+			<if test="searchStDate != null and searchStDate != '' ">
+				AND req_date BETWEEN #{searchStDate} AND #{searchEdDate}
+			</if>  
+			<if test="searchCrime != null and searchCrime != '' ">
+				AND req_reason_code = #{searchCrime}
+			</if> 
+			<if test="searchPosition != null and searchPosition != '' ">
+				AND position = #{searchPosition}
+			</if> 
+			<if test="searchDepart != null and searchDepart != '' ">
+				AND depart = #{searchDepart}
+			</if> 
+			<if test="searchTeam != null and searchTeam != '' ">
+				AND team = #{searchTeam}
+			</if> 
+			<if test="searchWord != null and searchWord != '' ">
+				AND userid = #{searchWord}
+			</if>
+			GROUP BY 
+			<choose>
+				<when test="dateFlag eq 'monthly'">DATE_FORMAT(req_date,'%Y-%m')</when>		
+				<otherwise>DATE_FORMAT(req_date,'%Y')</otherwise>
+			</choose>			
+	</select>		
+	
+		
+	<select id="resultStatTimeList" parameterType="ApplyStatCustomDto" resultType="ApplyStatCustomDto">
+		SELECT
+			'전체' AS yearCnt,
+	        IFNULL(SUM(1),0) AS totalCnt,
+	        IFNULL(SUM(IF(HOUR(used_video_start) <![CDATA[>=]]> '00' and  HOUR(used_video_start) <![CDATA[<]]> '03', 1, 0)),0) AS time00_03,
+	        IFNULL(SUM(IF(HOUR(used_video_start) <![CDATA[>=]]> '03' and  HOUR(used_video_start) <![CDATA[<]]> '06', 1, 0)),0) AS time03_06,
+	        IFNULL(SUM(IF(HOUR(used_video_start) <![CDATA[>=]]> '06' and  HOUR(used_video_start) <![CDATA[<]]> '09', 1, 0)),0) AS time06_09,
+	        IFNULL(SUM(IF(HOUR(used_video_start) <![CDATA[>=]]> '09' and  HOUR(used_video_start) <![CDATA[<]]> '12', 1, 0)),0) AS time09_12,
+	        IFNULL(SUM(IF(HOUR(used_video_start) <![CDATA[>=]]> '12' and  HOUR(used_video_start) <![CDATA[<]]> '15', 1, 0)),0) AS time12_15,
+	        IFNULL(SUM(IF(HOUR(used_video_start) <![CDATA[>=]]> '15' and  HOUR(used_video_start) <![CDATA[<]]> '18', 1, 0)),0) AS time15_18,
+	        IFNULL(SUM(IF(HOUR(used_video_start) <![CDATA[>=]]> '18' and  HOUR(used_video_start) <![CDATA[<]]> '21', 1, 0)),0) AS time18_21,
+	        IFNULL(SUM(IF(HOUR(used_video_start) <![CDATA[>=]]> '21' and  HOUR(used_video_start) <![CDATA[<]]> '24', 1, 0)),0) AS time21_24,
+	        IFNULL(SUM(IF(HOUR(used_video_start) <![CDATA[>=]]> '07' AND  HOUR(used_video_start) <![CDATA[<]]> '18', 1, 0)),0) AS timeH07_18,
+	        IFNULL(SUM(IF(HOUR(used_video_start) <![CDATA[>=]]> '18'
+              AND HOUR(used_video_start) <![CDATA[<]]> '24' or HOUR(used_video_start) <![CDATA[>=]]> '00' AND HOUR(used_video_start) <![CDATA[<]]> '07', 1, 0)),0) AS timeH18_07
+		FROM ves_item_result a, ves_item b
+		WHERE
+			a.item_serial = b.item_serial 
+			AND a.item_use = '0' AND a.used_video_start IS NOT NULL
+			<if test="level != null and level != ''">
+    			<if test="level != 8 and level != 9">
+        		AND userid = #{userId}
+        		</if>
+    		</if>
+			<if test="searchStDate != null and searchStDate != '' ">
+				AND req_date BETWEEN #{searchStDate} AND #{searchEdDate}
+			</if>
+			<if test="searchCrime != null and searchCrime != '' ">
+				AND req_reason_code = #{searchCrime}
+			</if> 
+			<if test="searchPosition != null and searchPosition != '' ">
+				AND position = #{searchPosition}
+			</if> 
+			<if test="searchDepart != null and searchDepart != '' ">
+				AND depart = #{searchDepart}
+			</if> 
+			<if test="searchTeam != null and searchTeam != '' ">
+				AND team = #{searchTeam}
+			</if> 	
+			<if test="searchWord != null and searchWord != '' ">
+				AND userid = #{searchWord}
+			</if> 											
+		UNION	 
+		SELECT
+			<choose>
+				<when test="dateFlag eq 'monthly'">DATE_FORMAT(req_date,'%Y-%m') AS yearCnt,</when>		
+				<otherwise>DATE_FORMAT(req_date,'%Y') AS yearCnt,</otherwise>
+			</choose>
+	        SUM(1) AS totalCnt,
+	        SUM(IF(HOUR(used_video_start) <![CDATA[>=]]> '00' and  HOUR(used_video_start) <![CDATA[<]]> '03', 1, 0)) AS time00_03,
+	        SUM(IF(HOUR(used_video_start) <![CDATA[>=]]> '03' and  HOUR(used_video_start) <![CDATA[<]]> '06', 1, 0)) AS time03_06,
+	        SUM(IF(HOUR(used_video_start) <![CDATA[>=]]> '06' and  HOUR(used_video_start) <![CDATA[<]]> '09', 1, 0)) AS time06_09,
+	        SUM(IF(HOUR(used_video_start) <![CDATA[>=]]> '09' and  HOUR(used_video_start) <![CDATA[<]]> '12', 1, 0)) AS time09_12,
+	        SUM(IF(HOUR(used_video_start) <![CDATA[>=]]> '12' and  HOUR(used_video_start) <![CDATA[<]]> '15', 1, 0)) AS time12_15,
+	        SUM(IF(HOUR(used_video_start) <![CDATA[>=]]> '15' and  HOUR(used_video_start) <![CDATA[<]]> '18', 1, 0)) AS time15_18,
+	        SUM(IF(HOUR(used_video_start) <![CDATA[>=]]> '18' and  HOUR(used_video_start) <![CDATA[<]]> '21', 1, 0)) AS time18_21,
+	        SUM(IF(HOUR(used_video_start) <![CDATA[>=]]> '21' and  HOUR(used_video_start) <![CDATA[<]]> '24', 1, 0)) AS time21_24,
+	        SUM(IF(HOUR(used_video_start) <![CDATA[>=]]> '07' AND  HOUR(used_video_start) <![CDATA[<]]> '18', 1, 0)) AS timeH07_18,
+	        SUM(IF(HOUR(used_video_start) <![CDATA[>=]]> '18'
+              AND HOUR(used_video_start) <![CDATA[<]]> '24' or HOUR(used_video_start) <![CDATA[>=]]> '00' AND HOUR(used_video_start) <![CDATA[<]]> '07', 1, 0)) AS timeH18_07
+		FROM ves_item_result a, ves_item b
+		WHERE
+			a.item_serial = b.item_serial 
+			AND a.item_use = '0' AND a.used_video_start IS NOT NULL
+			<if test="level != null and level != ''">
+    			<if test="level != 8 and level != 9">
+        		AND userid = #{userId}
+        		</if>
+    		</if>
+			<if test="searchStDate != null and searchStDate != '' ">
+				AND used_video_start BETWEEN #{searchStDate} AND #{searchEdDate}
+			</if>  
+			<if test="searchCrime != null and searchCrime != '' ">
+				AND req_reason_code = #{searchCrime}
+			</if> 
+			<if test="searchPosition != null and searchPosition != '' ">
+				AND position = #{searchPosition}
+			</if> 
+			<if test="searchDepart != null and searchDepart != '' ">
+				AND depart = #{searchDepart}
+			</if> 
+			<if test="searchTeam != null and searchTeam != '' ">
+				AND team = #{searchTeam}
+			</if> 
+			<if test="searchWord != null and searchWord != '' ">
+				AND userid = #{searchWord}
+			</if> 											
+			GROUP BY 
+			<choose>
+				<when test="dateFlag eq 'monthly'">DATE_FORMAT(req_date,'%Y-%m')</when>		
+				<otherwise>DATE_FORMAT(req_date,'%Y')</otherwise>
+			</choose>			
+	</select>
+	<select id="applyBusinessList" parameterType="ApplyStatCustomDto" resultType="ApplyStatCustomDto">
+		SELECT
+			LPAD(IFNULL(totA.applyReqCnt,0),
+				if(length(IFNULL(totA.applyReqCnt,0))> 2,length(IFNULL(totA.applyReqCnt,0)),2) ,0) as busiApplyReqCnt,
+			LPAD(IFNULL(totA.applyProcCnt,0),
+				if(length(IFNULL(totA.applyProcCnt,0))> 2,length(IFNULL(totA.applyProcCnt,0)),2),0) as busiApplyProcCnt,
+			LPAD(IFNULL(totA.extendReqCnt,0),
+				if(length(IFNULL(totA.extendReqCnt,0))> 2,length(IFNULL(totA.extendReqCnt,0)),2),0) as busiExtendReqCnt,
+			LPAD(IFNULL(totA.extendApplyCnt,0),
+				if(length(IFNULL(totA.extendApplyCnt,0))> 2,length(IFNULL(totA.extendApplyCnt,0)),2),0) as busiExtendApplyCnt,
+			LPAD(IFNULL(totA.changeReqCnt,0),
+				if(length(IFNULL(totA.changeReqCnt,0))> 2,length(IFNULL(totA.changeReqCnt,0)),2),0) as busiChangeReqCnt,
+			LPAD(IFNULL(totA.changeApplyCnt,0),
+				if(length(IFNULL(totA.changeApplyCnt,0))> 2,length(IFNULL(totA.changeApplyCnt,0)),2),0) as busiChangeApplyCnt
+		FROM
+		(
+			SELECT 
+			in_a.*,
+			in_b.*,
+			in_c.*
+			FROM 
+			(
+				<!-- 영상정보신청 -->
+				select
+					count(*) as applyReqCnt,
+					(SELECT count(*) FROM ves_item b WHERE  b.vei_status <![CDATA[<>]]> 0 ) as applyProcCnt
+				from ves_item where vei_status = 0
+			) in_a,
+			(
+				<!-- 연장신청 -->
+				select 
+					count(*) as extendReqCnt,
+					(SELECT count(*) FROM ves_item WHERE vei_apply_status in (3,5) ) as extendApplyCnt
+				from ves_item c
+				where vei_apply_status = 2
+			) in_b ,
+			(
+				<!-- 변경요청 -->
+				select 
+					count(DISTINCT vcr.no) as changeReqCnt,
+					(SELECT count(*) FROM ves_change_req WHERE status in (1001, 1002)) as changeApplyCnt
+				from ves_change_req vcr
+				left join ves_change_req_contents vcrc on vcr.no = vcrc.no
+				where status = 1000
+				and type_depth1 = '영상정보신청'
+			) in_c
+		) totA
+	</select>
+	<select id="itemUseResultDiff" parameterType="ApplyStatCustomDto" resultType="ApplyStatCustomDto">
+		select
+			if(item_use=0,'Y','N') as useResDiff,
+			count(*) as useResDiffCnt
+		from ves_item_result
+		group by item_use
+	</select>
+	
+	<select id="itemMinDate" resultType="string">
+		select min(req_date) 
+		from ves_item
+	</select>
+	
+</mapper>

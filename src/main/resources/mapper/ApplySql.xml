@@ -1,0 +1,880 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.happyJ.realestate.dao.ApplyDao">
+	
+	<select id="selectApplyList" parameterType="ApplyCustomDto" resultType="ApplyCustomDto">
+		SELECT * FROM (SELECT @ROWNUM := @ROWNUM +1 AS RNUM, A.* FROM (
+			SELECT 
+				a.item_serial as itemSerial, 
+				a.userid as userId, 
+				c.username as userName, 
+				c.password, 
+				c.phonenum as phoneNum,
+				c.level, 
+				a.position, 
+				a.depart, 
+				a.team, 
+				c.expired, 
+				d.code_val as codeVal,
+				a.media_code as mediaCode, 
+				a.req_userid as reqUserId, 
+				date_format(a.req_date, '%Y-%m-%d %H:%i:%s') as reqDate, 
+				a.req_phone as reqPhone, 
+				a.req_reason_code reqReasonCode, 
+				a.req_reason as reqReason,
+				a.req_position as reqPosition, 
+				a.req_username as reqUsername, 
+				a.video_id as videoId, 
+				date_format(a.video_start, '%Y-%m-%d %H:%i:%s') as videoStart, 
+				date_format(a.video_end, '%Y-%m-%d %H:%i:%s') as videoEnd, 
+				a.video_position as videoPosition, 
+				a.vei_license_code as veiLicenseCode, 
+				a.vei_limit_count as veiLimitCount, 
+				date_format(a.vei_limit_datetime, '%Y-%m-%d %H:%i:%s') as veiLimitDatetime, 
+				a.vei_crypt_key as veiCryptKey, 
+				a.vei_status as veiStatus,
+				(select code_val from ves_code where code_group = '109' and code_key = a.vei_status ) as statusNm,
+				a.vei_apply_status as veiApplyStatus,
+				(select code_val from ves_code where code_group = '120' and code_key = a.vei_apply_status ) as applyStatusNm,
+				a.vei_reject_reason as veiRejectReason, 
+				date_format(a.vei_dn_limit_date, '%Y-%m-%d %H:%i:%s') as veiDnLimit, 
+				a.vei_dn_limit_count as veiDnLimitCount,
+				a.vei_req_type as veiReqType,
+				a.extention_apply as extentionApply,   
+				IF((a.vei_limit_count - b.cnt) is null, a.vei_limit_count, (a.vei_limit_count - b.cnt)) as modLimit,
+				e.item_result as itemResult, 
+				e.item_use as itemUse,
+				e.result_code as resultCode, 
+				e.result_memo as resultMemo, 
+				date_format(e.result_time, '%Y-%m-%d %H:%i:%s') as resultTime
+			FROM ves_item a
+			LEFT OUTER JOIN ( select item_serial, sum(1) as cnt 
+							  from ves_log 
+							  where log_type=0 
+							  group by item_serial
+							) b on a.item_serial = b.item_serial
+			LEFT OUTER JOIN ves_user c on a.userid = c.userid
+			LEFT OUTER JOIN ves_code d on a.req_reason_code = d.code_key and d.code_group = '101'
+			LEFT OUTER JOIN ves_item_result e on a.item_serial = e.item_serial
+			<where>
+				<if test="level != null and level != ''">
+      				<if test="level != 8 and level != 9">
+	         		AND c.userid = #{userId}
+	         		</if>
+      			</if>
+				<if test="searchStatus != null and searchStatus != '' ">
+					AND a.vei_status = #{searchStatus}
+					<if test="searchApplyStatus != null and searchApplyStatus != '' ">
+						AND a.vei_apply_status = #{searchApplyStatus}
+					</if>
+					<if test="searchApplyStatus == null or searchApplyStatus == '' ">
+						AND a.vei_apply_status is null
+					</if>
+				</if>
+				<if test="searchStDate != null and searchStDate != '' ">
+				AND a.req_date BETWEEN CONCAT(#{searchStDate},' 00:00:00') AND CONCAT(#{searchEdDate}, ' 23:59:59')
+				</if>
+				<if test="searchCrime != null and searchCrime != '' ">
+				AND d.code_key = #{searchCrime}
+				</if>
+				<if test="searchPosition != null and searchPosition != '' ">
+				AND c.position = #{searchPosition}
+				</if>
+				<if test="searchDepart != null and searchDepart != '' ">
+				AND c.depart = #{searchDepart}
+				</if>
+				<if test="searchTeam != null and searchTeam != '' ">
+				AND c.team = #{searchTeam}
+				</if>
+				<if test="searchWord != null and searchWord != '' ">
+				<![CDATA[ AND a.userid LIKE CONCAT('%', #{searchWord}, '%') ]]>
+				</if> 		
+				AND a.vei_status <![CDATA[<>]]> '3' 
+			</where>
+			ORDER BY a.item_serial DESC
+		) A, (SELECT @ROWNUM := 0) R) TB
+		WHERE RNUM BETWEEN ((#{currentPage} - 1) * #{rowSize} + 1) AND (#{currentPage} * #{rowSize})
+	</select>
+	
+	<select id="selectApplyListExcel" parameterType="ApplyCustomDto" resultType="ApplyCustomDto">
+		SELECT 
+			a.item_serial as itemSerial, 
+			a.userid as userId, 
+			c.username as userName, 
+			c.password, 
+			c.phonenum as phoneNum,
+			c.level, 
+			a.position, 
+			a.depart, 
+			a.team, 
+			c.expired, 
+			d.code_val as codeVal,
+			a.media_code as mediaCode, 
+			a.req_userid as reqUserId, 
+			date_format(a.req_date, '%Y-%m-%d %H:%i:%s') as reqDate, 
+			a.req_phone as reqPhone, 
+			a.req_reason_code reqReasonCode, 
+			a.req_reason as reqReason,
+			a.req_position as reqPosition, 
+			a.req_username as reqUsername, 
+			a.video_id as videoId,
+			date_format(a.video_start, '%Y-%m-%d %H:%i:%s') as videoStart, 
+			date_format(a.video_end, '%Y-%m-%d %H:%i:%s') as videoEnd, 
+			a.video_position as videoPosition, 
+			a.vei_license_code as veiLicenseCode, 
+			a.vei_limit_count as veiLimitCount, 
+			date_format(a.vei_limit_datetime, '%Y-%m-%d %H:%i:%s') as veiLimitDatetime, 
+			a.vei_crypt_key as veiCryptKey, 
+			a.vei_status as veiStatus,
+       		(select code_val from ves_code where code_group = '109' and code_key = a.vei_status ) as statusNm,
+			a.vei_reject_reason as veiRejectReason, 
+			date_format(a.vei_dn_limit_date, '%Y-%m-%d %H:%i:%s') as veiDnLimitDate, 
+			a.vei_dn_limit_count as veiDnLimitCount,
+			a.vei_req_type as veiReqType,
+			a.vei_doc_no as veiDocNo, 
+			a.extention_apply as extentionApply,   
+			IF((a.vei_limit_count - b.cnt) is null, a.vei_limit_count, (a.vei_limit_count - b.cnt)) as modLimit,
+			b.cnt as playCount,
+			(select code_val from ves_code where code_group = '111' and code_key = e.item_Result ) as itemResult,
+			(select code_val from ves_code where code_group = '112' and code_key = e.item_Use ) as itemUse,
+			e.result_code as resultCode, 
+			e.result_memo as resultMemo, 
+			date_format(e.result_time, '%Y-%m-%d %H:%i:%s') as resultTime
+		FROM ves_item a
+		LEFT OUTER JOIN ( SELECT item_serial, SUM(1) as cnt 
+						  FROM ves_log 
+						  WHERE log_type=0 
+						  GROUP BY item_serial
+						) b ON a.item_serial = b.item_serial
+		LEFT OUTER JOIN ves_user c on a.userid = c.userid
+		LEFT OUTER JOIN ves_code d on a.req_reason_code = d.code_key and d.code_group = '101'
+		LEFT OUTER JOIN ves_item_result e on a.item_serial = e.item_serial
+		<where>
+			<if test="level != null and level != ''">
+     			<if test="level != 8 and level != 9">
+         		AND c.userid = #{userId}
+         		</if>
+     		</if>
+			<if test="searchStatus != null and searchStatus != '' ">
+			AND a.vei_status = #{searchStatus}
+			</if>
+			<if test="searchStDate != null and searchStDate != '' ">
+			AND a.req_date BETWEEN CONCAT(#{searchStDate},' 00:00:00') AND CONCAT(#{searchEdDate}, ' 23:59:59')
+			</if>
+			<if test="searchCrime != null and searchCrime != '' ">
+			AND d.code_key = #{searchCrime}
+			</if>
+			<if test="searchPosition != null and searchPosition != '' ">
+			AND c.position = #{searchPosition}
+			</if>
+			<if test="searchDepart != null and searchDepart != '' ">
+			AND c.depart = #{searchDepart}
+			</if>
+			<if test="searchTeam != null and searchTeam != '' ">
+			AND c.team = #{searchTeam}
+			</if>
+			<if test="searchWord != null and searchWord != '' ">
+			<![CDATA[ AND a.userid LIKE CONCAT('%', #{searchWord}, '%') ]]>
+			</if> 
+			AND a.vei_status <![CDATA[<>]]> '3' 
+		</where>
+		ORDER BY a.item_serial DESC
+	</select>
+	
+	<select id="selectApplyListCount" parameterType="ApplyCustomDto" resultType="int">
+		SELECT COUNT(*)
+		FROM ves_item a
+		LEFT OUTER JOIN ( select item_serial, sum(1) as cnt 
+						  from ves_log 
+						  where log_type=0 
+						  group by item_serial
+						) b on a.item_serial = b.item_serial
+		LEFT OUTER JOIN ves_user c on a.userid = c.userid 
+		LEFT OUTER JOIN ves_code d on a.req_reason_code = d.code_key and d.code_group = '101'
+		LEFT OUTER JOIN ves_item_result e on a.item_serial = e.item_serial 
+		<where>
+			<if test="level != null and level != '아이디'">
+   				<if test="level != 8 and level != 9">
+	       		AND c.userid = #{userId}
+	       		</if>
+   			</if>
+			<if test="searchStatus != null and searchStatus != '' ">
+			AND a.vei_status = #{searchStatus}
+				<if test="searchApplyStatus != null and searchApplyStatus != '' ">
+					AND a.vei_apply_status = #{searchApplyStatus}
+				</if>
+				<if test="searchApplyStatus == null or searchApplyStatus == '' ">
+					AND a.vei_apply_status is null
+				</if>
+			</if>
+			<if test="searchStDate != null and searchStDate != '' ">
+				AND a.req_date BETWEEN CONCAT(#{searchStDate},' 00:00:00') AND CONCAT(#{searchEdDate}, ' 23:59:59')
+			</if>
+			<if test="searchCrime != null and searchCrime != '' ">
+			AND d.code_key = #{searchCrime}
+			</if>
+			<if test="searchPosition != null and searchPosition != '' ">
+			AND c.position = #{searchPosition}
+			</if>
+			<if test="searchDepart != null and searchDepart != '' ">
+			AND c.depart = #{searchDepart}
+			</if>
+			<if test="searchTeam != null and searchTeam != '' ">
+			AND c.team = #{searchTeam}
+			</if>
+			<if test="searchWord != null and searchWord != '' ">
+			<![CDATA[ AND a.userid LIKE CONCAT('%', #{searchWord}, '%') ]]>
+			</if>
+			AND a.vei_status <![CDATA[<>]]> '3' 
+		</where>
+		ORDER BY a.item_serial ASC
+	</select>
+	
+	<select id="selectTotalCounts" parameterType="ApplyCustomDto" resultType="ApplyCustomDto">
+		SELECT
+			COUNT(vei_status) AS totalCnt,
+			(SELECT COUNT(vei_status) 
+			 FROM ves_item a, ves_code b
+			 WHERE
+			 	a.req_reason_code = b.code_key
+	         	AND b.code_group = '101'
+      			AND a.vei_status <![CDATA[<>]]> '3'
+      			<if test="level != null and level != ''">
+      				<if test="level != 8 and level != 9">
+	         		AND a.userid = #{userId}
+	         		</if>
+      			</if>
+	         	AND DATE_FORMAT(a.req_date, '%Y') = YEAR(NOW())
+	        ) AS yearCnt,
+			COUNT(IF(vei_status in (0,8), 1, NULL)) AS waitingCnt,
+			COUNT(IF(vei_status in (1,9), 1, NULL)) AS procCnt,
+			COUNT(IF(vei_status = 2, 1, NULL)) AS allowCnt,
+			COUNT(IF(vei_status > 99, 1, NULL)) AS deniedCnt
+		FROM ves_item a, ves_code b
+		WHERE
+			a.req_reason_code = b.code_key
+			AND b.code_group = '101'
+			AND a.vei_status <![CDATA[<>]]> '3'
+			<if test="level != null and level != ''">
+    			<if test="level != 8 and level != 9">
+        		AND a.userid = #{userId}
+        		</if>
+    		</if>
+	</select>
+	
+	<select id="selectApplyInfo" parameterType="ApplyCustomDto" resultType="ApplyCustomDto">
+		SELECT 
+			a.item_serial as itemSerial,
+			a.userid as userId,
+			a.req_userid as reqUserId,
+			date_format(a.req_date, '%Y-%m-%d %H:%i:%s') as reqDate,
+			a.position,
+			a.depart,
+			a.team,
+			a.req_username as reqUsername, 
+			a.req_phone as reqPhone, 
+			a.req_reason as reqReason,
+			a.vei_doc_no as veiDocNo,
+			a.vei_crypt_key as veiCryptKey, 
+			a.vei_status as veiStatus,
+			a.vei_apply_status as veiApplyStatus,
+			a.req_reason_code as reqReasonCode, 
+			a.req_reasoncode_reason as reqReasoncodeReason,
+			c.code_val as codeVal,
+			a.req_position as reqPosition, 
+			a.addr2 as addr1,
+			a.addr3 as addr2,
+			a.addr2 as addr3,
+			a.addr3 as addr4,
+			a.lat as lat,
+			a.lng as lng,
+			a.video_id as videoId, 
+			DATE_FORMAT(a.video_start, '%Y-%m-%d %H:%i:%s') as videoStart, 
+			DATE_FORMAT(a.video_end, '%Y-%m-%d %H:%i:%s') as videoEnd, 
+			DATE_FORMAT(a.approving_date, '%Y-%m-%d %H:%i:%s') as approvingDate,
+			DATE_FORMAT(a.approval_date, '%Y-%m-%d %H:%i:%s') as approvalDate, 
+			DATE_FORMAT(a.process_date, '%Y-%m-%d %H:%i:%s') as processDate,
+			CONCAT(SEC_TO_TIME(TIMESTAMPDIFF(second, a.req_date, a.approving_date))) as procTime,
+			DATE_FORMAT(a.vei_dn_limit_date, '%Y-%m-%d %H:%i:%s') as veiDnLimitDate,
+			a.vei_dn_limit_count as veiDnLimitCount,
+			DATE_FORMAT(a.vei_limit_datetime, '%Y-%m-%d %H:%i:%s') as veiLimitDatetime, 
+			a.vei_limit_count as veiLimitCount,
+			IF((a.vei_limit_count - d.cnt) is null, a.vei_limit_count, (a.vei_limit_count - d.cnt)) as modLimit,
+			IF (d.cnt IS NULL, 0, d.cnt) as playCnt,
+			a.fileupload_vol as fileuploadVol
+		FROM ves_item a
+		LEFT OUTER JOIN ves_user b on a.userid = b.userid
+		LEFT OUTER JOIN ves_code c on a.req_reason_code = c.code_key and c.code_group = '101'
+		LEFT OUTER JOIN ( select item_serial, sum(1) as cnt 
+						  from ves_log 
+						  where log_type=0 
+						  group by item_serial
+						) d on a.item_serial = d.item_serial
+		<where>
+			<if test="itemSerial != null and itemSerial != '' ">
+				a.item_serial = #{itemSerial}
+			</if>
+			<if test="userId != null and userId != '' ">
+				AND b.userid = #{userId}
+			</if>
+			<if test="password != null and password != '' ">
+				AND b.password = password(#{password})
+			</if>
+		</where>
+	</select>
+	
+	<insert id="insertApplyInfo" parameterType="ApplyCustomDto">
+		INSERT INTO ves_item(
+			userid
+			,req_userid
+			,req_date
+			,position
+			,depart
+			,team
+			,req_username
+			,req_phone
+			,req_reason_code
+			,req_reasoncode_reason
+			,req_reason
+			,req_position
+			,video_id
+			,video_group
+			,video_start
+			,video_end
+			,video_position
+			,media_code
+			,vei_license_code
+			,vei_limit_count
+			,vei_limit_datetime
+			,vei_crypt_key
+			,vei_dn_limit_date
+			,addr1
+			,addr2
+			,addr3
+			,addr4
+			,lat
+			,lng
+			,vei_doc_no
+			,vei_req_type
+			<if test="veiReqType != '0'">
+				,viewer_birthday
+				,viewer_address
+				,viewer_reason
+			</if>
+			,org_item_serial
+			,reapply_reason
+		) VALUES (
+			#{userId}
+			,#{userId}
+			,NOW()
+			,#{position}
+			,#{depart}
+			,#{team}
+			,#{userName}
+			,#{phoneNum}
+			,#{reqReasonCode}
+			<choose>
+				<when test="reqReasonCode != null and reqReasonCode == 99999">
+				,#{reqReasoncodeReason}
+				</when>
+				<otherwise>
+				,''
+				</otherwise>
+			</choose>
+			,#{reqReason}
+			,#{reqPosition}
+			,#{videoId}
+			,#{videoGroup}
+			,STR_TO_DATE(#{videoStart}, '%Y-%m-%d %H:%i:%s')
+			,STR_TO_DATE(#{videoEnd}, '%Y-%m-%d %H:%i:%s')
+			,''
+			,#{mediaCode}
+			,#{veiLicenseCode}
+			,#{veiLimitCount}
+			,STR_TO_DATE(CONCAT(DATE_FORMAT(ADDDATE(CURDATE(), INTERVAL #{veiLimitDatetime} DAY), '%Y-%m-%d'), ' 23:59:59'), '%Y-%m-%d %H:%i:%s')
+			,#{veiCryptKey}
+			,STR_TO_DATE(CONCAT(DATE_FORMAT(ADDDATE(CURDATE(), INTERVAL 14 DAY), '%Y-%m-%d'), ' 23:59:59'), '%Y-%m-%d %H:%i:%s')
+			,#{addr1}
+			,#{addr2}
+			,#{addr3}
+			,#{addr4}
+			,#{lat}
+			,#{lng}
+			,#{veiDocNo}
+			,#{veiReqType}
+			<if test="veiReqType != '0'">
+				,#{viewerBirthday}
+				,#{viewerAddress}
+				,#{viewerReason}
+			</if>
+			,#{orgItemSerial}
+			,#{reapplyReason}
+		)
+		<selectKey keyProperty="item_serial" resultType="Integer" order="AFTER">
+			SELECT LAST_INSERT_ID()
+		</selectKey>
+	</insert>
+	
+	<select id="selectRejectList" parameterType="ApplyCustomDto" resultType="ApplyCustomDto">
+		SELECT * FROM (SELECT @ROWNUM := @ROWNUM +1 AS RNUM, A.* FROM (
+			SELECT 
+				item_serial AS itemSerial,
+				userid AS userId,
+				req_username AS reqUsername,
+				date_format(req_date, '%Y-%m-%d %H:%i:%s') as reqDate,
+				vei_reject_reason AS veiRejectReason,
+				date_format(reject_date, '%Y-%m-%d %H:%i:%s') AS rejectDate
+			FROM ves_item
+			<where>
+				vei_status = 3
+				<if test="searchKind != null and searchKind != '' ">
+					<if test="searchKind == 'name'">
+						AND req_username = #{searchWord}
+					</if>
+					<if test="searchKind == 'reason'">
+						<![CDATA[ AND vei_reject_reason LIKE CONCAT('%', #{searchWord}, '%') ]]>
+					</if>
+				</if>
+			</where> 
+			ORDER BY item_serial DESC
+		) A, (SELECT @ROWNUM := 0) R) TB
+		WHERE RNUM BETWEEN ((#{currentPage} - 1) * #{rowSize} + 1) AND (#{currentPage} * #{rowSize})
+	</select>
+	
+	<select id="selectRejectListExcel" parameterType="ApplyCustomDto" resultType="ApplyCustomDto">
+			SELECT 
+				item_serial AS itemSerial,
+				userid AS userId,
+				req_username AS reqUsername,
+				date_format(req_date, '%Y-%m-%d %H:%i:%s') as reqDate,
+				vei_reject_reason AS veiRejectReason,
+				date_format(reject_date, '%Y-%m-%d %H:%i:%s') AS rejectDate
+			FROM ves_item
+			<where>
+				vei_status = 3
+				<if test="searchKind != null and searchKind != '' ">
+					<if test="searchKind == 'name'">
+						AND req_username = #{searchWord}
+					</if>
+					<if test="searchKind == 'reason'">
+						<![CDATA[ AND vei_reject_reason LIKE CONCAT('%', #{searchWord}, '%') ]]>
+					</if>
+				</if>
+			</where> 
+			ORDER BY item_serial DESC
+	</select>
+	
+	<select id="selectRejectListCounts" parameterType="ApplyCustomDto" resultType="int">
+			SELECT COUNT(*) FROM ves_item
+			<where>
+				vei_status = 3
+				<if test="searchKind != null and searchKind != '' ">
+					<if test="searchKind == 'name'">
+						AND req_username = #{searchWord}
+					</if>
+					<if test="searchKind == 'reason'">
+						<![CDATA[ AND vei_reject_reason LIKE CONCAT('%', #{searchWord}, '%') ]]>
+					</if>
+				</if>
+			</where> 
+	</select>
+	
+	<select id="selectMarkerList" parameterType="ApplyCustomDto" resultType="ApplyCustomDto">
+		SELECT
+			a.item_serial as itemSerial,
+			a.addr2 as addr2,
+			a.addr3 as addr3,
+			a.lat as itemLatitude,
+			a.lng as itemLongitude,
+			a.req_reason_code as itemType,
+			CONCAT(a.addr3, '-', b.code_val) as code2,
+			b.code_desc as imageSrc
+		FROM ves_item a
+		LEFT OUTER JOIN ves_code b on a.req_reason_code = b.code_key and b.code_group = '101'
+		<where>
+			a.addr2 = #{addr2} and a.vei_status <![CDATA[<>]]> '3'
+			<if test="addr3 != null and addr3 != '' ">
+				AND a.addr3 = #{addr3}
+			</if>
+			<if test="searchStDate != null and searchStDate != '' ">
+				AND DATE_FORMAT(a.req_date, '%Y%m%d') BETWEEN #{searchStDate} AND #{searchEdDate}
+				AND HOUR(a.req_date) in 
+				(
+					select HOUR(req_date) FROM ves_item_result
+					<where>
+						<if test="timeSlot00 != null and timeSlot00 != ''">
+							or HOUR(req_date) between 00 and 24
+						</if>
+						<if test="timeSlot07 != null and timeSlot07 != ''">
+							or HOUR(req_date) between 07 and 18
+						</if>
+						<if test="timeSlot18 != null and timeSlot18 != ''">
+							or HOUR(req_date) between 18 and 22
+						</if>
+						<if test="timeSlot22 != null and timeSlot22 != ''">
+							or (HOUR(req_date) between 22 and 23 or HOUR(video_start) between 00 and 03)
+						</if>
+						<if test="timeSlot03 != null and timeSlot03 != ''">
+							or HOUR(req_date) between 03 and 07
+						</if>
+					</where>
+				)
+			</if>
+		</where>
+	</select>
+	
+	<update id="updateApplyInfo" parameterType="ApplyCustomDto">
+		UPDATE ves_item
+		<set>
+			<if test="userId != null and userId != '' ">userid = #{userId},</if>
+			<if test="reqUserId != null and reqUserId != '' ">req_userid = #{reqUserId},</if>
+			<if test="reqDate != null and reqDate != '' ">req_date = #{reqDate},</if>
+			<if test="position != null and position != '' ">position = #{position},</if>
+			<if test="depart != null and depart != '' ">depart = #{depart},</if>
+			<if test="team != null and team != '' ">team = #{team},</if>
+			<if test="reqUsername != null and reqUsername != '' ">req_username = #{reqUsername},</if>
+			<if test="reqPhone != null and reqPhone != '' ">req_phone = #{reqPhone},</if>
+			<if test="reqReasonCode != null and reqReasonCode != '' ">req_reason_code = #{reqReasonCode},</if>
+			<if test="reqReasoncodeReason != null and reqReasoncodeReason != '' ">req_reasoncode_reason = #{reqReasoncodeReason},</if>
+			<if test="reqReason != null and reqReason != '' ">req_reason = #{reqReason},</if>
+			<if test="videoId != null and videoId != '' ">video_id = #{videoId},</if>
+			<if test="videoGroup != null and videoGroup != '' ">video_group = #{videoGroup},</if>
+			<if test="videoStart != null and videoStart != '' ">video_start = #{videoStart},</if>
+			<if test="videoEnd != null and videoEnd != '' ">video_end = #{videoEnd},</if>
+			<if test="videoPosition != null and videoPosition != '' ">video_position = #{videoPosition},</if>
+			<if test="veiLimitCount != null and veiLimitCount != '' ">
+				vei_limit_count = #{veiLimitCount},
+			</if>
+			<if test="veiLimitDatetime != null and veiLimitDatetime != '' ">
+				vei_limit_datetime = DATE_FORMAT(#{veiLimitDatetime}, '%Y-%m-%d %H:%i:%s'),
+			</if>
+			<if test="veiCryptKey != null and veiCryptKey != '' ">vei_crypt_key = #{veiCryptKey},</if>
+			<if test="veiStatus != null and veiStatus != '' ">
+				vei_status = #{veiStatus},
+				<if test="veiStatus == 2">
+					approval_date = NOW(),
+				</if>
+				<if test="veiStatus == 3">
+					reject_date = NOW(),
+				</if>
+				<if test="veiStatus == 8">
+					approving_date = NOW(),
+				</if>
+				process_date = NOW(),
+			</if>
+			<if test="veiApplyStatus != null and veiApplyStatus != '' ">
+				vei_apply_status = #{veiApplyStatus},
+			</if>
+			<if test="veiDnLimitDate != null and veiDnLimitDate != '' ">
+				vei_dn_limit_date = DATE_FORMAT(#{veiDnLimitDate}, '%Y-%m-%d %H:%i:%s'),
+			</if>
+			<if test="veiDnLimitCount != null and veiDnLimitCount != '' ">
+				vei_dn_limit_count = #{veiDnLimitCount},
+			</if>
+			<if test="veiDnLimitCountMinus != null and veiDnLimitCountMinus != '' ">
+				vei_dn_limit_count = (vei_dn_limit_count - #{veiDnLimitCountMinus}),
+			</if>
+			<if test='investigatingDate == "Y"'>
+				investigating_date = NOW(),
+			</if>
+			<if test="veiRejectReason != null and veiRejectReason != '' ">vei_reject_reason = #{veiRejectReason},</if>
+			<if test="addr1 != null and addr1 != '' ">addr1 = #{addr1},</if>
+			<if test="addr2 != null and addr2 != '' ">addr2 = #{addr2},</if>
+			<if test="addr3 != null and addr3 != '' ">addr3 = #{addr3},</if>
+			<if test="addr4 != null and addr4 != '' ">addr4 = #{addr4},</if>
+			<if test="lat != null and lat != '' ">lat = #{lat},</if>
+			<if test="lng != null and lng != '' ">lng = #{lng},</if>
+			<if test="veiDocNo != null and veiDocNo != '' ">vei_doc_no = #{veiDocNo},</if>
+			<if test="veiReqType != null and veiReqType != '' ">vei_req_type = #{veiReqType},</if>
+			<if test="viewerBirthday != null and viewerBirthday != '' ">viewer_birthday = #{viewerBirthday},</if>
+			<if test="viewerAddress != null and viewerAddress != '' ">viewer_address = #{viewerAddress},</if>
+			<if test="viewerReason != null and viewerReason != '' ">viewer_reason = #{viewerReason},</if>
+			<if test="extentionApply != null and extentionApply != '' ">extention_apply = #{extentionApply},</if>
+			<if test="orgItemSerial != null and orgItemSerial != '' ">org_item_serial = #{orgItemSerial},</if>
+			<if test="reapplyReason != null and reapplyReason != '' ">reapply_reason = #{reapplyReason},</if>
+			<if test="fileuploadVol != null and fileuploadVol != '' ">fileupload_vol = #{fileuploadVol},</if>
+			<if test="fileuploadSpd != null and fileuploadSpd != '' ">fileupload_spd = #{fileuploadSpd},</if>
+			<if test="filedownloadDate != null and filedownloadDate != '' ">filedownload_date = #{filedownloadDate}</if>
+			<if test="itemExportPollingIp != null and itemExportPollingIp != '' ">itemexportpolling_ip = #{itemExportPollingIp}</if>
+		</set>
+		<where>
+			item_serial = #{itemSerial}
+		</where>
+	</update>
+	
+	
+	<select id="selectResultList" parameterType="ApplyCustomDto" resultType="ApplyCustomDto">
+		SELECT * FROM (SELECT @ROWNUM := @ROWNUM +1 AS rNUM, A.* FROM (
+			SELECT a.item_serial AS itemSerial,
+			       a.req_userid AS reqUserId,
+			       a.req_username AS reqUsername,
+			       a.req_phone AS reqPhone,
+			       a.req_reason_code AS reqReasonCode,
+			       a.vei_apply_status AS applyStatusNm,
+			       b.code_val AS codeVal,
+			       a.video_id AS videoId,
+			       date_format(a.req_date, '%Y-%m-%d %H:%i:%s') AS reqDate,
+			       date_format(a.vei_limit_datetime, '%Y-%m-%d %H:%i:%s') AS veiLimitDatetime,
+			       TO_DAYS(NOW()) - TO_DAYS(IF(e.item_result=2,a.investigating_date,a.vei_limit_datetime)) AS pastDate,
+			       IF(f.code_val IS NULL OR f.code_val='연장신청' OR f.code_val='연장미승인', '일반', IF(f.code_val='연장승인완료', '연장신청', f.code_val)) AS unregistedType
+			  FROM ves_item a
+			       LEFT OUTER JOIN ves_code b ON a.req_reason_code = b.code_key AND b.code_group = '101'
+			       LEFT OUTER JOIN ves_user c on a.userid = c.userid
+			       LEFT OUTER JOIN ves_item_result e on a.item_serial = e.item_serial
+			       LEFT OUTER JOIN ves_code f ON a.vei_apply_status = f.code_key AND f.code_group = '120'
+			<where>
+				<!-- 미등록 상태값 -->
+ 				a.vei_status = 2
+       			AND (
+       					(e.item_serial IS NULL AND a.vei_limit_datetime &lt; now())
+						OR
+						(e.item_result = 2 AND (TO_DAYS(NOW()) - TO_DAYS(a.investigating_date)) >= (#{veiLimitDays} * 2))
+					)
+				<if test="level != null and level != ''">
+      				<if test="level != 8 and level != 9">
+	         			AND req_userid = #{userId}
+	         		</if>
+      			</if>       			
+				<if test="searchWord != null and searchCrime != '' ">
+						AND b.code_key = #{searchCrime}
+				</if>
+				<if test="searchCrime != null and searchCrime != '' ">
+						AND b.code_key = #{searchCrime}
+				</if>
+				<if test="searchStDate != null and searchStDate != '' ">
+						AND a.req_date BETWEEN CONCAT(#{searchStDate},' 00:00:00') AND CONCAT(#{searchEdDate}, ' 23:59:59')
+				</if>
+				<if test="searchType != null and searchType != '' ">
+				    <choose>
+				        <when test="searchType == 1">
+				        	AND (a.vei_apply_status IS NULL OR a.vei_apply_status = 2 OR a.vei_apply_status = 5)
+				        </when>
+				        <when test="searchType == 2">
+				        	AND a.vei_apply_status = 1    
+				        </when>
+				        <when test="searchType == 3">
+				        	AND a.vei_apply_status = 3
+				        </when>
+				    </choose>
+				</if>
+				<if test="searchPosition != null and searchPosition != '' ">
+						AND c.position = #{searchPosition}
+				</if>
+				<if test="searchDepart != null and searchDepart != '' ">
+						AND c.depart = #{searchDepart}
+				</if>
+				<if test="searchTeam != null and searchTeam != '' ">
+						AND c.team = #{searchTeam}
+				</if>
+				<if test="searchWord != null and searchWord != '' ">
+					<![CDATA[ AND req_userid LIKE CONCAT('%', #{searchWord}, '%') ]]>
+				</if>
+			</where> 
+			AND a.vei_status <![CDATA[<>]]> '3' 
+			ORDER BY a.item_serial DESC
+		) A, (SELECT @ROWNUM := 0) R) TB
+		WHERE RNUM BETWEEN ((#{currentPage} - 1) * #{rowSize} + 1) AND (#{currentPage} * #{rowSize})
+	</select>	
+	
+	<select id="selectResultListExcel" parameterType="ApplyCustomDto" resultType="ApplyCustomDto">
+			SELECT a.item_serial AS itemSerial,
+			       a.req_userid AS reqUserId,
+			       a.req_username AS reqUsername,
+			       a.req_phone AS reqPhone,
+			       a.req_reason_code AS reqReasonCode,
+			       b.code_val AS codeVal,
+			       a.video_id AS videoId,
+			       date_format(a.req_date, '%Y-%m-%d %H:%i:%s') AS reqDate,
+			       date_format(a.vei_limit_datetime, '%Y-%m-%d %H:%i:%s') AS veiLimitDatetime,
+			       TO_DAYS(NOW()) - TO_DAYS(IF(e.item_result=2,a.investigating_date,a.vei_limit_datetime)) AS pastDate,
+			       IF(f.code_val IS NULL OR f.code_val='연장신청' OR f.code_val='연장미승인', '일반', IF(f.code_val='연장승인완료', '연장신청', f.code_val)) AS unregistedType
+			  FROM ves_item a
+			       LEFT OUTER JOIN ves_code b ON a.req_reason_code = b.code_key AND b.code_group = '101'
+			       LEFT OUTER JOIN ves_user c on a.userid = c.userid
+			       LEFT OUTER JOIN ves_item_result e on a.item_serial = e.item_serial
+			       LEFT OUTER JOIN ves_code f ON a.vei_apply_status = f.code_key AND f.code_group = '120'
+			<where>
+				<!-- 미등록 상태값 -->
+ 				a.vei_status = 2
+       			AND (
+       					(e.item_serial IS NULL AND a.vei_limit_datetime &lt; now())
+						OR
+						(e.item_result = 2 AND (TO_DAYS(NOW()) - TO_DAYS(a.investigating_date)) >= (#{veiLimitDays} * 2))
+					)
+				<if test="level != null and level != ''">
+      				<if test="level != 8 and level != 9">
+	         			AND req_userid = #{userId}
+	         		</if>
+      			</if>       			
+				<if test="searchWord != null and searchCrime != '' ">
+						AND b.code_key = #{searchCrime}
+				</if>
+				<if test="searchCrime != null and searchCrime != '' ">
+						AND b.code_key = #{searchCrime}
+				</if>
+				<if test="searchStDate != null and searchStDate != '' ">
+						AND a.req_date BETWEEN CONCAT(#{searchStDate},' 00:00:00') AND CONCAT(#{searchEdDate}, ' 23:59:59')
+				</if>
+				<if test="searchType != null and searchType != '' ">
+				    <choose>
+				        <when test="searchType == 1">
+				        	AND (a.vei_apply_status IS NULL OR a.vei_apply_status = 2 OR a.vei_apply_status = 5)
+				        </when>
+				        <when test="searchType == 2">
+				        	AND a.vei_apply_status = 1    
+				        </when>
+				        <when test="searchType == 3">
+				        	AND a.vei_apply_status = 3
+				        </when>
+				    </choose>
+				</if>
+				<if test="searchPosition != null and searchPosition != '' ">
+						AND c.position = #{searchPosition}
+				</if>
+				<if test="searchDepart != null and searchDepart != '' ">
+						AND c.depart = #{searchDepart}
+				</if>
+				<if test="searchTeam != null and searchTeam != '' ">
+						AND c.team = #{searchTeam}
+				</if>
+				<if test="searchWord != null and searchWord != '' ">
+					<![CDATA[ AND req_userid LIKE CONCAT('%', #{searchWord}, '%') ]]>
+				</if>
+			</where> 
+			AND a.vei_status <![CDATA[<>]]> '3'
+			ORDER BY a.item_serial DESC
+	</select>	
+	
+	<select id="selectResultListCounts" parameterType="ApplyCustomDto" resultType="int">
+			SELECT COUNT(*) 
+			FROM ves_item a
+				LEFT OUTER JOIN ves_code b ON a.req_reason_code = b.code_key AND b.code_group = '101'
+			    LEFT OUTER JOIN ves_user c on a.userid = c.userid
+			    LEFT OUTER JOIN ves_item_result e on a.item_serial = e.item_serial
+			    LEFT OUTER JOIN ves_code f ON a.vei_apply_status = f.code_key AND f.code_group = '120'
+			<where>
+ 				<!-- 미등록 상태값 -->
+ 				a.vei_status = 2
+       			AND (
+       					(e.item_serial IS NULL AND a.vei_limit_datetime &lt; now())
+						OR
+						(e.item_result = 2 AND (TO_DAYS(NOW()) - TO_DAYS(a.investigating_date)) >= (#{veiLimitDays} * 2))
+					)
+				<if test="level != null and level != ''">
+      				<if test="level != 8 and level != 9">
+	         			AND req_userid = #{userId}
+	         		</if>
+      			</if>        			
+				<if test="searchWord != null and searchCrime != '' ">
+						AND b.code_key = #{searchCrime}
+				</if>
+				<if test="searchCrime != null and searchCrime != '' ">
+						AND b.code_key = #{searchCrime}
+				</if>
+				<if test="searchStDate != null and searchStDate != '' ">
+						AND a.req_date BETWEEN CONCAT(#{searchStDate},' 00:00:00') AND CONCAT(#{searchEdDate}, ' 23:59:59')
+				</if>
+				<if test="searchType != null and searchType != '' ">
+				    <choose>
+				        <when test="searchType == 1">
+				        	AND (a.vei_apply_status IS NULL OR a.vei_apply_status = 2 OR a.vei_apply_status = 5)
+				        </when>
+				        <when test="searchType == 2">
+				        	AND a.vei_apply_status = 1    
+				        </when>
+				        <when test="searchType == 3">
+				        	AND a.vei_apply_status = 3
+				        </when>
+				    </choose>
+				</if>
+				<if test="searchPosition != null and searchPosition != '' ">
+						AND c.position = #{searchPosition}
+				</if>
+				<if test="searchDepart != null and searchDepart != '' ">
+						AND c.depart = #{searchDepart}
+				</if>
+				<if test="searchTeam != null and searchTeam != '' ">
+						AND c.team = #{searchTeam}
+				</if>
+				<if test="searchWord != null and searchWord != '' ">
+					<![CDATA[ AND req_userid LIKE CONCAT('%', #{searchWord}, '%') ]]>
+				</if>
+				AND a.vei_status <![CDATA[<>]]> '3'
+			</where> 
+	</select>
+	
+	<select id="selectApplyListForAPI" parameterType="ApplyCustomDto" resultType="ItemList">
+		SELECT 
+			a.item_serial as itemSerial, 
+			a.userid as userId, 
+			c.username as userName, 
+			c.password, 
+			c.phonenum as phoneNum,
+			c.level, 
+			a.position, 
+			a.depart, 
+			a.team, 
+			c.expired, 
+			d.code_val as codeVal,
+			a.media_code as mediaCode, 
+			a.req_userid as reqUserId, 
+			date_format(a.req_date, '%Y-%m-%d %H:%i:%s') as reqDate, 
+			a.req_phone as reqPhone, 
+			a.req_reason_code reqReasonCode, 
+			a.req_reason as reqReason,
+			a.req_position as reqPosition, 
+			a.req_username as reqUsername, 
+			a.video_id as videoInfo, 
+			date_format(a.video_start, '%Y-%m-%d %H:%i:%s') as videoStart, 
+			date_format(a.video_end, '%Y-%m-%d %H:%i:%s') as videoEnd, 
+			a.video_position as videoPosition, 
+			a.vei_license_code as veiLicenseCode, 
+			a.vei_limit_count as veiLimitCount, 
+			date_format(a.vei_limit_datetime, '%Y-%m-%d %H:%i:%s') as veiLimitDatetime, 
+			a.vei_crypt_key as veiCryptKey, 
+			a.vei_status as veiStatus,
+			(select code_val from ves_code where code_group = '109' and code_key = a.vei_status ) as statusNm,
+			a.vei_reject_reason as veiRejectReason, 
+			date_format(a.vei_dn_limit_date, '%Y-%m-%d %H:%i:%s') as veiDnLimitDate, 
+			a.vei_dn_limit_count as veiDnLimitCount,
+			a.vei_req_type as veiReqType,
+			a.extention_apply as extentionApply,   
+			IF((a.vei_limit_count - b.cnt) is null, a.vei_limit_count, (a.vei_limit_count - b.cnt)) as modLimit,
+			e.item_result as itemResult, 
+			e.item_use as itemUse,
+			e.result_code as resultCode, 
+			e.result_memo as resultMemo, 
+			date_format(e.result_time, '%Y-%m-%d %H:%i:%s') as resultTime,
+			a.itemexportpolling_ip as itemExportPollingIp
+		FROM ves_item a
+		LEFT OUTER JOIN ( select item_serial, sum(1) as cnt 
+						  from ves_log 
+						  where log_type=0 
+						  group by item_serial
+						) b on a.item_serial = b.item_serial
+		LEFT OUTER JOIN ves_user c on a.userid = c.userid
+		LEFT OUTER JOIN ves_code d on a.req_reason_code = d.code_key and d.code_group = '101'
+		LEFT OUTER JOIN ves_item_result e on a.item_serial = e.item_serial
+		<where>
+			a.vei_status =  8
+			<if test='isDualVMS == "Y"'>
+				AND (a.itemexportpolling_ip is null or a.itemexportpolling_ip = #{itemExportPollingIp} )
+			</if>
+		</where>
+		order by a.req_date asc limit 1
+	</select>
+	
+	<select id="selectUserIdForFile" parameterType="string" resultType="ApplyCustomDto">
+	    SELECT i.req_userid, i.userid
+		FROM ves_item i
+		LEFT JOIN ves_file f on f.item_serial = i.item_serial
+		WHERE f.item_no = #{itemNo}
+	</select>
+	
+	<select id="selectDownloadLimitCount" parameterType="ApplyCustomDto" resultType="int">
+	    SELECT vei_dn_limit_count 
+		FROM ves_item
+		WHERE item_serial = #{itemSerial}
+	</select>
+	
+</mapper>

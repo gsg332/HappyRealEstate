@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.happyJ.realestate.dao.MenuDao">
+	
+	<select id="selectMenuList" parameterType="MenuDto" resultType="MenuDto">
+		SELECT 
+			menu_id as menuId, 
+			p_menu_id as pMenuId, 
+			menu_nm as menuNm, 
+			menu_url as menuUrl, 
+			menu_depth as menuDepth, 
+			menu_auth menuAuth, 
+			use_yn as useYn, 
+			date_format(reg_date, '%Y-%m-%d %H:%i:%s') as regDate, 
+			reg_id as regId, 
+			date_format(mod_date, '%Y-%m-%d %H:%i:%s') as modDate, 
+			mod_id as modId 
+		FROM 
+			ves_menu_new
+		WHERE 
+			use_yn = 'Y'
+			AND menu_depth = #{menuDepth} 
+			AND menu_auth LIKE CONCAT('%',#{menuAuth},'%')
+		ORDER BY menu_id ASC
+	</select>
+	
+</mapper>

@@ -1,0 +1,281 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.happyJ.realestate.dao.ChangeReqDao">	
+	
+	<insert id="insertApplyInfoChangeReq" parameterType="ChangeReqDto" useGeneratedKeys="true" keyProperty="no">
+		INSERT INTO ves_change_req(
+			item_id,
+			req_userid,
+			req_ip,
+			status
+		) VALUES (
+			#{itemId},
+			#{reqUserid},
+			#{reqIp},
+			#{status}
+		)
+	</insert>
+	
+	<insert id="insertChangeReqContents" parameterType="ChangeReqContentsDto">
+		INSERT INTO ves_change_req_contents(
+			no,
+			type_depth1,
+			type_depth2,
+			request_value
+		) VALUES (
+			#{no},
+			#{typeDepth1},
+			#{typeDepth2},
+			#{requestValue}
+		)
+	</insert>
+	
+	<select id="selectChangeReqList" parameterType="ChangeReqDto" resultType="ChangeReqDto">
+		SELECT * FROM (SELECT @ROWNUM := @ROWNUM +1 AS RNUM, A.* 
+		FROM (
+			SELECT 
+				vcr.no AS no,
+				vcr.item_id AS itemId,
+				vcr.req_userid AS reqUserid,
+				req_ip AS reqIp,
+				date_format(vcr.req_date, '%Y-%m-%d %H:%i:%s') AS reqDate,
+				date_format(vcr.approval_date, '%Y-%m-%d %H:%i:%s') AS approvalDate,
+				vcr.unapproval_reason AS unapprovalReason,
+				vcr.status AS status ,
+				IFNULL(vcrc.type_depth1,0) AS typeDepth1,
+				group_concat(vcrc.type_depth2 SEPARATOR ',') AS typeDepth2,
+				group_concat(vcrc.request_value SEPARATOR '|') AS requestValues
+			FROM ves_change_req vcr
+			LEFT JOIN ves_change_req_contents vcrc
+			on vcr.no = vcrc.no
+			<where>
+				vcr.req_userid = #{reqUserid}
+				<if test="searchStatus != null and searchStatus != '' ">
+				AND vcr.status = #{searchStatus}
+				</if>
+				<if test="searchStDate != null and searchStDate != '' ">
+				AND vcr.req_date BETWEEN CONCAT(#{searchStDate},' 00:00:00') AND CONCAT(#{searchEdDate}, ' 23:59:59')
+				</if>
+				<if test="searchTypeDepth1 != null and searchTypeDepth1 != '' ">
+				AND vcrc.type_depth1 = #{searchTypeDepth1}
+				</if>
+			</where>
+			group by vcr.no, vcrc.type_depth1
+			ORDER BY no DESC
+		) A, (SELECT @ROWNUM := 0) R) TB
+		WHERE RNUM BETWEEN ((#{currentPage} - 1) * #{rowSize} + 1) AND (#{currentPage} * #{rowSize})		
+	</select>
+	
+	<select id="selectAdminChangeReqList" parameterType="ChangeReqDto" resultType="ChangeReqDto">
+		SELECT * FROM (SELECT @ROWNUM := @ROWNUM +1 AS RNUM, A.* 
+		FROM (
+			SELECT 
+				vcr.no AS no,
+				vcr.item_id AS itemId,
+				vcr.req_userid AS reqUserid,
+				req_ip AS reqIp,
+				date_format(vcr.req_date, '%Y-%m-%d %H:%i:%s') AS reqDate,
+				date_format(vcr.approval_date, '%Y-%m-%d %H:%i:%s') AS approvalDate,
+				vcr.unapproval_reason AS unapprovalReason,
+				vcr.status AS status,
+				IFNULL(vcrc.type_depth1,0) AS typeDepth1,
+				group_concat(vcrc.type_depth2 SEPARATOR ',') AS typeDepth2,
+				group_concat(vcrc.request_value SEPARATOR '|') AS requestValues,
+				u.phonenum AS phoneNum
+			FROM ves_change_req vcr
+			LEFT JOIN ves_change_req_contents vcrc on vcr.no = vcrc.no
+			LEFT JOIN ves_user u on vcr.req_userid = u.userid
+			<where>
+				<if test="searchStatus != null and searchStatus != '' ">
+				AND vcr.status = #{searchStatus}
+				</if>
+				<if test="searchStDate != null and searchStDate != '' ">
+				AND vcr.req_date BETWEEN CONCAT(#{searchStDate},' 00:00:00') AND CONCAT(#{searchEdDate}, ' 23:59:59')
+				</if>
+				<if test="searchTypeDepth1 != null and searchTypeDepth1 != '' ">
+				AND vcrc.type_depth1 = #{searchTypeDepth1}
+				</if>
+				<if test="searchPosition != null and searchPosition != '' ">
+				AND u.position = #{searchPosition}
+				</if>
+				<if test="searchDepart != null and searchDepart != '' ">
+				AND u.depart = #{searchDepart}
+				</if>
+				<if test="searchTeam != null and searchTeam != '' ">
+				AND u.team = #{searchTeam}
+				</if>
+				<if test="searchUserid != null and searchUserid != '' ">
+					<![CDATA[ AND u.userid LIKE CONCAT('%', #{searchUserid}, '%') ]]>
+				</if>
+			</where>
+			group by vcr.no, vcrc.type_depth1
+			ORDER BY no DESC
+		) A, (SELECT @ROWNUM := 0) R) TB
+		WHERE RNUM BETWEEN ((#{currentPage} - 1) * #{rowSize} + 1) AND (#{currentPage} * #{rowSize})		
+	</select>
+	
+	<select id="selectChangeReqListCounts" parameterType="ChangeReqDto" resultType="int">
+		SELECT COUNT(*)
+		FROM (
+				SELECT COUNT(*) 
+				FROM ves_change_req vcr
+				LEFT JOIN ves_change_req_contents vcrc
+				on vcr.no = vcrc.no
+				<where>
+					vcr.req_userid = #{reqUserid}
+					<if test="searchStatus != null and searchStatus != '' ">
+					AND vcr.status = #{searchStatus}
+					</if>
+					<if test="searchStDate != null and searchStDate != '' ">
+					AND vcr.req_date BETWEEN CONCAT(#{searchStDate},' 00:00:00') AND CONCAT(#{searchEdDate}, ' 23:59:59')
+					</if>
+					<if test="searchTypeDepth1 != null and searchTypeDepth1 != '' ">
+					AND vcrc.type_depth1 = #{searchTypeDepth1}
+					</if>
+				</where>
+				group by vcr.no, vcrc.type_depth1
+		) cnt
+	</select>
+	
+	<select id="selectAdminChangeReqListCounts" parameterType="ChangeReqDto" resultType="int">
+		SELECT COUNT(*)
+		FROM (
+				SELECT COUNT(*) 
+				FROM ves_change_req vcr
+				LEFT JOIN ves_change_req_contents vcrc on vcr.no = vcrc.no
+				LEFT JOIN ves_user u on vcr.req_userid = u.userid
+				<where>
+					<if test="searchStatus != null and searchStatus != '' ">
+					AND vcr.status = #{searchStatus}
+					</if>
+					<if test="searchStDate != null and searchStDate != '' ">
+					AND vcr.req_date BETWEEN CONCAT(#{searchStDate},' 00:00:00') AND CONCAT(#{searchEdDate}, ' 23:59:59')
+					</if>
+					<if test="searchTypeDepth1 != null and searchTypeDepth1 != '' ">
+					AND vcrc.type_depth1 = #{searchTypeDepth1}
+					</if>
+					<if test="searchPosition != null and searchPosition != '' ">
+					AND u.position = #{searchPosition}
+					</if>
+					<if test="searchDepart != null and searchDepart != '' ">
+					AND u.depart = #{searchDepart}
+					</if>
+					<if test="searchTeam != null and searchTeam != '' ">
+					AND u.team = #{searchTeam}
+					</if>
+					<if test="searchUserid != null and searchUserid != '' ">
+						<![CDATA[ AND u.userid LIKE CONCAT('%', #{searchUserid}, '%') ]]>
+					</if>
+				</where>
+				group by vcr.no, vcrc.type_depth1
+		) cnt
+	</select>
+	
+	<select id="selectChangeReqContents" parameterType="ChangeReqDto" resultType="ChangeReqContentsDto">
+		SELECT 
+			vcrc.no AS no,
+			vcrc.type_depth1 AS typeDepth1,
+			vcrc.type_depth2 AS typeDepth2,
+			vcrc.request_value AS requestValue
+		FROM ves_change_req_contents vcrc
+		WHERE vcrc.no = #{no}
+	</select>
+	
+	<delete id="deleteChangeReq" parameterType="ChangeReqDto">
+		DELETE FROM ves_change_req
+		WHERE no = #{no} AND item_id = #{itemId} 
+	</delete>
+	
+	<!-- 
+	<delete id="deleteChangeReqContents" parameterType="long">
+		DELETE FROM ves_change_req_contents
+		WHERE no = #{no} 
+	</delete>
+	 -->
+	
+	<update id="updateChangeReq" parameterType="ChangeReqDto">
+		UPDATE ves_change_req
+		<set>
+			approval_date = #{approvalDate},
+			unapproval_reason = #{unapprovalReason},
+			status = #{status}
+		</set>
+		WHERE no = #{no} AND item_id = #{itemId} 
+	</update>	
+	
+	<select id="selectChangeReqListExcel" parameterType="ChangeReqDto" resultType="ChangeReqDto">
+		SELECT 
+			vcr.no AS no,
+			vcr.item_id AS itemId,
+			vcr.req_userid AS reqUserid,
+			req_ip AS reqIp,
+			date_format(vcr.req_date, '%Y-%m-%d %H:%i:%s') AS reqDate,
+			date_format(vcr.approval_date, '%Y-%m-%d %H:%i:%s') AS approvalDate,
+			vcr.unapproval_reason AS unapprovalReason,
+			vcr.status AS status ,
+			IFNULL(vcrc.type_depth1,0) AS typeDepth1,
+			group_concat(vcrc.type_depth2 SEPARATOR ',') AS typeDepth2,
+			group_concat(vcrc.request_value SEPARATOR '|') AS requestValues
+		FROM ves_change_req vcr
+		LEFT JOIN ves_change_req_contents vcrc
+		on vcr.no = vcrc.no
+		<where>
+			vcr.req_userid = #{reqUserid}
+			<if test="searchStatus != null and searchStatus != '' ">
+			AND vcr.status = #{searchStatus}
+			</if>
+			<if test="searchStDate != null and searchStDate != '' ">
+			AND vcr.req_date BETWEEN CONCAT(#{searchStDate},' 00:00:00') AND CONCAT(#{searchEdDate}, ' 23:59:59')
+			</if>
+			<if test="searchTypeDepth1 != null and searchTypeDepth1 != '' ">
+			AND vcrc.type_depth1 = #{searchTypeDepth1}
+			</if>
+		</where>
+		group by vcr.no, vcrc.type_depth1
+		ORDER BY no DESC
+	</select>
+	
+	<select id="selectAdminChangeReqListExcel" parameterType="ChangeReqDto" resultType="ChangeReqDto">
+		SELECT 
+			vcr.no AS no,
+			vcr.item_id AS itemId,
+			vcr.req_userid AS reqUserid,
+			req_ip AS reqIp,
+			date_format(vcr.req_date, '%Y-%m-%d %H:%i:%s') AS reqDate,
+			date_format(vcr.approval_date, '%Y-%m-%d %H:%i:%s') AS approvalDate,
+			vcr.unapproval_reason AS unapprovalReason,
+			vcr.status AS status,
+			IFNULL(vcrc.type_depth1,0) AS typeDepth1,
+			group_concat(vcrc.type_depth2 SEPARATOR ',') AS typeDepth2,
+			group_concat(vcrc.request_value SEPARATOR '|') AS requestValues
+		FROM ves_change_req vcr
+		LEFT JOIN ves_change_req_contents vcrc on vcr.no = vcrc.no
+		LEFT JOIN ves_user u on vcr.req_userid = u.userid
+		<where>
+			<if test="searchStatus != null and searchStatus != '' ">
+			AND vcr.status = #{searchStatus}
+			</if>
+			<if test="searchStDate != null and searchStDate != '' ">
+			AND vcr.req_date BETWEEN CONCAT(#{searchStDate},' 00:00:00') AND CONCAT(#{searchEdDate}, ' 23:59:59')
+			</if>
+			<if test="searchTypeDepth1 != null and searchTypeDepth1 != '' ">
+			AND vcrc.type_depth1 = #{searchTypeDepth1}
+			</if>
+			<if test="searchPosition != null and searchPosition != '' ">
+			AND u.position = #{searchPosition}
+			</if>
+			<if test="searchDepart != null and searchDepart != '' ">
+			AND u.depart = #{searchDepart}
+			</if>
+			<if test="searchTeam != null and searchTeam != '' ">
+			AND u.team = #{searchTeam}
+			</if>
+			<if test="searchUserid != null and searchUserid != '' ">
+				<![CDATA[ AND u.userid LIKE CONCAT('%', #{searchUserid}, '%') ]]>
+			</if>
+		</where>
+		group by vcr.no, vcrc.type_depth1
+		ORDER BY no DESC
+	</select>
+	
+</mapper>

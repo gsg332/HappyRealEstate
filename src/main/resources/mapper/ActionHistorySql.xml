@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.happyJ.realestate.dao.ActionHistoryDao">
+	
+	<select id="selectActionHistoryList" parameterType="ActionHistoryDto" resultType="ActionHistoryDto">
+		SELECT * FROM (SELECT @ROWNUM := @ROWNUM +1 AS RNUM, A.* FROM (
+			SELECT 
+				idx AS idx,
+				user_id AS userId,
+				access_ip AS accessIp,
+				menu AS menu,
+				action AS action,
+				memo AS memo,				
+				result AS result,
+				date_format(action_time, '%Y-%m-%d %H:%i:%s') AS actionTime,			
+				description AS description				
+			FROM ves_action_history
+			<where>
+				<if test="searchKind != null and searchKind != '' ">
+					<if test="searchKind == 'id'">
+						user_id = #{searchWord}
+					</if>
+					<if test="searchKind == 'menu'">
+						<![CDATA[ AND menu LIKE CONCAT('%', #{searchWord}, '%') ]]>
+					</if>
+				</if>
+			</where> 
+			ORDER BY idx DESC
+		) A, (SELECT @ROWNUM := 0) R) TB
+		WHERE RNUM BETWEEN ((#{currentPage} - 1) * #{rowSize} + 1) AND (#{currentPage} * #{rowSize})		
+	</select>
+	
+	<select id="selectActionHistoryListExcel" parameterType="ActionHistoryDto" resultType="ActionHistoryDto">
+			SELECT 
+				idx AS idx,
+				user_id AS userId,
+				access_ip AS accessIp,
+				menu AS menu,
+				action AS action,
+				memo AS memo,				
+				result AS result,
+				date_format(action_time, '%Y-%m-%d %H:%i:%s') AS actionTime,				
+				description AS description				
+			FROM ves_action_history
+			<where>
+				<if test="searchKind != null and searchKind != '' ">
+					<if test="searchKind == 'id'">
+						user_id = #{searchWord}
+					</if>
+					<if test="searchKind == 'menu'">
+						<![CDATA[ AND menu LIKE CONCAT('%', #{searchWord}, '%') ]]>
+					</if>
+				</if>
+			</where> 
+			ORDER BY idx DESC
+	</select>
+	
+	<select id="selectActionHistoryListCounts" parameterType="ActionHistoryDto" resultType="int">
+			SELECT COUNT(*) FROM ves_action_history
+			<where>
+				<if test="searchKind != null and searchKind != '' ">
+					<if test="searchKind == 'id'">
+						user_id = #{searchWord}
+					</if>
+					<if test="searchKind == 'menu'">
+						<![CDATA[ AND menu LIKE CONCAT('%', #{searchWord}, '%') ]]>
+					</if>
+				</if>
+			</where> 
+	</select>
+	
+	<select id="joinHistoryList" parameterType="ActionHistoryDto" resultType="ActionHistoryDto">
+		SELECT * FROM (SELECT @ROWNUM := @ROWNUM +1 AS rNUM, A.* FROM (
+			SELECT 
+				idx AS idx,
+				user_id AS userId,
+				access_ip AS accessIp,
+				menu AS menu,
+				action AS action,
+				memo AS memo,				
+				result AS result,
+				date_format(action_time, '%Y-%m-%d %H:%i:%s') AS actionTime,			
+				description AS description				
+			FROM ves_action_history
+			<where>
+				<!-- (menu LIKE '%회원 가입%' OR menu LIKE '%회원 탈퇴%') -->
+				menu = '사용자관리' AND action <![CDATA[<>]]> '접근'
+				<if test="searchKind != null and searchKind != '' ">
+					<if test="searchKind == 'id'">
+						AND user_id = #{searchWord}
+					</if>
+					<if test="searchKind == 'menu'">
+						<![CDATA[ AND menu LIKE CONCAT('%', #{searchWord}, '%') ]]>
+					</if>
+					<if test="searchKind == 'ip'">
+						<![CDATA[ AND access_ip LIKE CONCAT('%', #{searchWord}, '%') ]]>
+					</if>
+					<if test="searchKind == 'history'">
+						<![CDATA[ AND action LIKE CONCAT('%', #{searchWord}, '%') ]]>
+					</if>
+					<if test="searchKind == 'detailed'">
+						<![CDATA[ AND memo LIKE CONCAT('%', #{searchWord}, '%') ]]>
+					</if>
+					<if test="searchKind == 'result'">
+						<![CDATA[ AND result LIKE CONCAT('%', #{searchWord}, '%') ]]>
+					</if>
+				</if>
+			</where> 
+			ORDER BY idx DESC
+		) A, (SELECT @ROWNUM := 0) R) TB
+		WHERE RNUM BETWEEN ((#{currentPage} - 1) * #{rowSize} + 1) AND (#{currentPage} * #{rowSize})		
+	</select>
+	
+	<select id="joinHistoryListExcel" parameterType="ActionHistoryDto" resultType="ActionHistoryDto">
+			SELECT 
+				idx AS idx,
+				user_id AS userId,
+				access_ip AS accessIp,
+				menu AS menu,
+				action AS action,
+				memo AS memo,				
+				result AS result,
+				date_format(action_time, '%Y-%m-%d %H:%i:%s') AS actionTime,				
+				description AS description				
+			FROM ves_action_history
+			<where>
+				<!-- (menu LIKE '%회원 가입%' OR menu LIKE '%회원 탈퇴%') -->
+				menu = '사용자관리' AND action <![CDATA[<>]]> '접근'
+				<if test="searchKind != null and searchKind != '' ">
+					<if test="searchKind == 'id'">
+						AND user_id = #{searchWord}
+					</if>
+					<if test="searchKind == 'menu'">
+						<![CDATA[ AND menu LIKE CONCAT('%', #{searchWord}, '%') ]]>
+					</if>
+				</if>
+			</where> 
+			ORDER BY idx DESC
+	</select>
+	
+	<select id="joinHistoryListCounts" parameterType="ActionHistoryDto" resultType="int">
+			SELECT COUNT(*) FROM ves_action_history
+			<where>
+				<!-- (menu LIKE '%회원 가입%' OR menu LIKE '%회원 탈퇴%') -->
+				menu = '사용자관리' AND action <![CDATA[<>]]> '접근'
+				<if test="searchKind != null and searchKind != '' ">
+					<if test="searchKind == 'id'">
+						AND user_id = #{searchWord}
+					</if>
+					<if test="searchKind == 'menu'">
+						<![CDATA[ AND menu LIKE CONCAT('%', #{searchWord}, '%') ]]>
+					</if>
+				</if>
+			</where> 
+	</select>	
+	
+	<insert id="insertActionHistoryInfo" parameterType="ActionHistoryDto">
+		INSERT INTO ves_action_history(
+			user_id
+			,access_ip
+			,menu
+			<if test="action != null and action != '' ">
+			,action
+			</if>
+			<if test="memo != null and memo != '' ">
+			,memo
+			</if>
+			<if test="result != null and result != '' ">
+			,result
+			</if>
+			<if test="description != null and description != '' ">
+			,description
+			</if>
+			,action_time
+		) VALUES (
+			#{userId}
+			,#{accessIp}
+			,#{menu}
+			<if test="action != null and action != '' ">
+			,#{action}
+			</if>
+			<if test="memo != null and memo != '' ">
+			,#{memo}
+			</if>
+			<if test="result != null and result != '' ">
+			,#{result}
+			</if>
+			<if test="description != null and description != '' ">
+			,#{description}
+			</if>
+			,NOW()
+		)
+	</insert>
+	
+</mapper>

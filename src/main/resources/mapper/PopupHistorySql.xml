@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.happyJ.realestate.dao.PopupHistoryDao">
+
+	<insert id="insertPopupHistory" parameterType="PopupHIstoryDto" >
+		INSERT INTO ves_popup_history(
+			popup_type
+			,item_serial
+			,subject
+			,contents
+			,reg_date
+		) VALUES (
+			#{popupType}
+			,#{itemSerial}
+			,#{subject}
+			,#{contents}
+			,now()
+		)
+	</insert>
+	
+</mapper>

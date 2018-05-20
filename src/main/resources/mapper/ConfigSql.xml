@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.happyJ.realestate.dao.ConfigDao">
+	
+	<select id="selectConfigList" parameterType="ConfigDto" resultType="ConfigDto">
+		SELECT * FROM (SELECT @ROWNUM := @ROWNUM +1 AS rnum, A.* FROM (
+			SELECT 
+				Item_Index as itemIndex,
+				Item_Type as itemType,
+				Item_Visible as itemVisible,
+				Item_Name as itemName,
+				Item_Value as itemValue,
+				Item_Etc itemEtc,
+				Item_Description as itemDescription
+			FROM ves_config
+			WHERE 
+				Item_Visible = 1
+				AND (Item_Type =  '*' OR Item_Type =  #{itemType})
+			ORDER BY 
+				CASE
+					WHEN (Item_Type = #{itemType} AND Item_Description LIKE 'SSL%') THEN 0 
+					WHEN (Item_Type = #{itemType} AND Item_Description LIKE '웹%') THEN 1 
+					WHEN (Item_Type = #{itemType} AND Item_Description LIKE 'Http%') THEN 2 
+					WHEN (Item_Type = #{itemType} AND Item_Description LIKE '네이버%') THEN 3 
+					WHEN (Item_Type = #{itemType} AND Item_Description LIKE 'Daum%API%') THEN 4 
+					WHEN (Item_Type = #{itemType} AND Item_Description LIKE 'CSS 사이트%') THEN 5 
+					WHEN (Item_Type = #{itemType} AND Item_Description LIKE '지도 초기%') THEN 6 
+					WHEN (Item_Type = #{itemType} AND Item_Description LIKE '지도 통계%') THEN 7 
+					WHEN (Item_Type = #{itemType} AND Item_Description LIKE 'Daum 지도 초기%') THEN 8 
+					WHEN (Item_Type = #{itemType} AND Item_Description LIKE '지도(통계)%') THEN 9 
+					WHEN (Item_Type = #{itemType} AND Item_Description LIKE 'SMS%') THEN 10 
+					WHEN (Item_Type = #{itemType}) THEN 11 
+					ELSE 12  
+				END, Item_Index ASC
+		) A, (SELECT @ROWNUM := 0) R) TB
+		WHERE RNUM BETWEEN ((#{currentPage} - 1) * #{rowSize} + 1) AND (#{currentPage} * #{rowSize})
+	</select>
+	
+	<select id="selectConfigListAll" parameterType="ConfigDto" resultType="ConfigDto">
+		SELECT 
+			Item_Index as itemIndex,
+			Item_Type as itemType,
+			Item_Visible as itemVisible,
+			Item_Name as itemName,
+			Item_Value as itemValue,
+			Item_Etc itemEtc,
+			Item_Description as itemDescription
+		FROM ves_config
+		WHERE 
+			Item_Visible = 1
+			AND (Item_Type =  '*' OR Item_Type =  #{itemType})
+		ORDER BY 
+			CASE
+				WHEN (Item_Type = #{itemType} AND Item_Description LIKE 'SSL%') THEN 0 
+				WHEN (Item_Type = #{itemType} AND Item_Description LIKE '웹%') THEN 1 
+				WHEN (Item_Type = #{itemType} AND Item_Description LIKE 'Http%') THEN 2 
+				WHEN (Item_Type = #{itemType} AND Item_Description LIKE '네이버%') THEN 3 
+				WHEN (Item_Type = #{itemType} AND Item_Description LIKE 'Daum%API%') THEN 4 
+				WHEN (Item_Type = #{itemType} AND Item_Description LIKE 'CSS 사이트%') THEN 5 
+				WHEN (Item_Type = #{itemType} AND Item_Description LIKE '지도 초기%') THEN 6 
+				WHEN (Item_Type = #{itemType} AND Item_Description LIKE '지도 통계%') THEN 7 
+				WHEN (Item_Type = #{itemType} AND Item_Description LIKE 'Daum 지도 초기%') THEN 8 
+				WHEN (Item_Type = #{itemType} AND Item_Description LIKE '지도(통계)%') THEN 9 
+				WHEN (Item_Type = #{itemType} AND Item_Description LIKE 'SMS%') THEN 10 
+				WHEN (Item_Type = #{itemType}) THEN 11 
+				ELSE 12  
+			END, Item_Index ASC
+	</select>
+	
+	<select id="selectConfigListCount" parameterType="ConfigDto" resultType="int">
+		SELECT 
+			COUNT(*)
+		FROM ves_config
+		WHERE 
+			Item_Visible = 1
+			AND (Item_Type =  '*' OR Item_Type =  #{itemType})
+		ORDER BY 
+			CASE
+				WHEN (Item_Type = #{itemType} AND Item_Description LIKE 'SSL%') THEN 0 
+				WHEN (Item_Type = #{itemType} AND Item_Description LIKE '웹%') THEN 1 
+				WHEN (Item_Type = #{itemType} AND Item_Description LIKE 'Http%') THEN 2 
+				WHEN (Item_Type = #{itemType} AND Item_Description LIKE '네이버%') THEN 3 
+				WHEN (Item_Type = #{itemType} AND Item_Description LIKE 'Daum%API%') THEN 4 
+				WHEN (Item_Type = #{itemType} AND Item_Description LIKE 'CSS 사이트%') THEN 5 
+				WHEN (Item_Type = #{itemType} AND Item_Description LIKE '지도 초기%') THEN 6 
+				WHEN (Item_Type = #{itemType} AND Item_Description LIKE '지도 통계%') THEN 7 
+				WHEN (Item_Type = #{itemType} AND Item_Description LIKE 'Daum 지도 초기%') THEN 8 
+				WHEN (Item_Type = #{itemType} AND Item_Description LIKE '지도(통계)%') THEN 9 
+				WHEN (Item_Type = #{itemType} AND Item_Description LIKE 'SMS%') THEN 10 
+				WHEN (Item_Type = #{itemType}) THEN 11 
+				ELSE 12  
+			END, Item_Index ASC
+	</select>
+	
+	<select id="selectConfigInfo" parameterType="ConfigDto" resultType="ConfigDto">
+		SELECT 
+			Item_Index as itemIndex, 
+			Item_Type as itemType, 
+			Item_Visible as itemVisible, 
+			Item_Name as itemName, 
+			Item_Value as itemValue, 
+			Item_Etc as itemEtc, 
+			Item_Description as itemDescription 
+		FROM ves_config
+		<where>
+			<if test="itemIndex != null and itemIndex != ''">
+			Item_Index = #{itemIndex}
+			</if>
+			<if test="itemType != null and itemType != ''">
+			AND Item_Type = #{itemType}
+			</if>
+			<if test="itemName != null and itemName != ''">
+			AND Item_Name = #{itemName}
+			</if>
+		</where>
+	</select>
+	
+	<select id="selectConfigListForAPI" parameterType="ConfigDto" resultType="ConfigDto">
+		SELECT 
+			Item_Name as itemName,
+			Item_Value as itemValue
+		FROM ves_config 
+		WHERE 
+			Item_Visible = 1 
+			AND Item_Name <![CDATA[<>]]> 'TIME_LOGOUT' 
+			AND Item_Type = '*' 
+			OR (Item_Name = 'CAMERA_SELECT' AND Item_Type = #{itemType}) 
+		ORDER BY CASE WHEN (Item_Type = #{itemType}) THEN 0 ELSE 1 END
+	</select>
+	
+	<update id="updateConfigInfo" parameterType="ConfigDto">
+		UPDATE ves_config
+		<set>
+			<if test="itemIndex != null and itemIndex != '' ">
+			Item_Index = #{itemIndex},
+			</if>
+			<if test="itemType != null and itemType != '' ">
+			Item_Type = #{itemType},
+			</if>
+			<if test="itemVisible != null and itemVisible != '' ">
+			Item_Visible = #{itemVisible},
+			</if>
+			<if test="itemName != null and itemName != '' ">
+			Item_Name = #{itemName},
+			</if>
+			<if test="itemValue != null and itemValue != '' ">
+			Item_Value = #{itemValue},
+			</if>
+			<if test="itemEtc != null and itemEtc != '' ">
+			Item_Etc = #{itemEtc},
+			</if>
+			<if test="itemDescription != null and itemDescription != '' ">
+			Item_Description = #{itemDescription},
+			</if>
+		</set>
+		<where>
+			<if test="itemIndex != null and itemIndex != ''">
+			Item_Index = #{itemIndex}
+			</if>
+			<if test="itemName != null and itemName != ''">
+			AND Item_Name = #{itemName}
+			</if>
+		</where>
+	</update>
+	
+</mapper>

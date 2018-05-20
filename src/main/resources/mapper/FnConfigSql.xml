@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.happyJ.realestate.dao.FnConfigDao">
+
+    <resultMap id="FnConfigDto_Map" type="FnConfigDto">
+    	<id property="itemIndex" column="Item_Index" />
+        <result property="pItemIndex" column="P_Item_Index" />
+        <result property="itemCode" column="Item_Code" />
+        <result property="itemVisible" column="Item_Visible" />
+        <result property="itemValue" column="Item_Value" />
+        <result property="itemDescription" column="Item_Description" />
+        <collection property="subConfigList" javaType="ArrayList" column="Item_Index" ofType="FnConfigDto" select="selectSubFnConfigList" />
+    </resultMap>
+    	
+	<select id="selectFnConfigList" parameterType="FnConfigDto" resultMap="FnConfigDto_Map">
+		SELECT * FROM (SELECT @ROWNUM := @ROWNUM +1 AS rnum, A.* FROM (
+			SELECT 
+				Item_Index,
+				P_Item_Index,
+				Item_Code,
+				Item_Visible,
+				Item_Value,
+				Item_Description
+			FROM ves_fn_config
+			WHERE Item_Visible = 1
+			AND P_Item_Index IS NULL
+			ORDER BY Item_Index ASC
+		) A, (SELECT @ROWNUM := 0) R) TB
+		WHERE RNUM BETWEEN ((#{currentPage} - 1) * #{rowSize} + 1) AND (#{currentPage} * #{rowSize})
+	</select>
+	
+	<select id="selectFnConfigListAll" parameterType="FnConfigDto" resultMap="FnConfigDto_Map">
+		SELECT 
+			Item_Index,
+			P_Item_Index,
+			Item_Code,
+			Item_Visible,
+			Item_Value,
+			Item_Description
+		FROM ves_fn_config
+		WHERE Item_Visible = 1
+		AND P_Item_Index IS NULL
+		ORDER BY Item_Index ASC
+	</select>
+	
+	<select id="selectSubFnConfigList" parameterType="int" resultType="FnConfigDto">
+		SELECT
+			Item_Index as itemIndex,
+			P_Item_Index as pItemIndex,
+			Item_Code as itemCode,
+			Item_Visible as itemVisible,
+			Item_Value as itemValue,
+			Item_Description as itemDescription
+		FROM ves_fn_config
+		WHERE Item_Visible = 1
+		AND P_Item_Index = #{Item_Index}
+		ORDER BY Item_Index ASC
+	</select>
+	
+	<select id="selectFnConfigListCount" parameterType="FnConfigDto" resultType="int">
+		SELECT COUNT(*)
+		FROM ves_fn_config
+		WHERE Item_Visible = 1
+		AND P_Item_Index IS NULL
+		ORDER BY Item_Index ASC
+	</select>
+	
+	<insert id="insertFnConfigInfo" parameterType="FnConfigDto">
+		INSERT INTO ves_fn_config(
+			P_Item_Index,
+			Item_Code,
+			Item_Visible,
+			Item_Value,
+			Item_Description
+		) VALUES (
+			#{pItemIndex},
+			#{itemCode},
+			#{itemVisible},
+			#{itemValue},
+			#{itemDescription}
+		)
+		<selectKey keyProperty="itemIndex" resultType="string" order="AFTER">
+			SELECT LAST_INSERT_ID()
+		</selectKey>
+	</insert>
+	
+	<update id="updateFnConfigInfo" parameterType="FnConfigDto">
+		UPDATE ves_fn_config
+		<set>
+			<if test="itemIndex != null and itemIndex != '' ">
+			Item_Index = #{itemIndex},
+			</if>
+			<if test="pItemIndex != null and pItemIndex != '' ">
+			P_Item_Index = #{pItemIndex},
+			</if>
+			<if test="itemCode != null and itemCode != '' ">
+			Item_Code = #{itemCode},
+			</if>
+			<if test="itemVisible != null and itemVisible != '' ">
+			Item_Visible = #{itemVisible},
+			</if>
+			<if test="itemValue != null and itemValue != '' ">
+			Item_Value = #{itemValue},
+			</if>
+			<if test="itemDescription != null and itemDescription != '' ">
+			Item_Description = #{itemDescription},
+			</if>
+		</set>
+		<where>
+			<if test="itemIndex != null and itemIndex != ''">
+			Item_Index = #{itemIndex}
+			</if>
+		</where>
+	</update>
+	
+	<delete id="deleteFnConfigInfo" parameterType="FnConfigDto">
+		DELETE FROM ves_fn_config
+		<where>
+			<if test="itemIndex != null and itemIndex != ''">
+				Item_Index = #{itemIndex} OR P_Item_Index = #{itemIndex}
+			</if>
+		</where>
+	</delete>
+	
+</mapper>

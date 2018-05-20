@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.happyJ.realestate.dao.LatlngDao">
+
+	<select id="selectMarkerList" parameterType="ItemLatlngDto" resultType="ItemLatlngDto">
+		SELECT 
+			no,
+			managecode,
+			item_type as itemType,
+			b.code_val as imageSrc,
+			item_longitude as itemLongitude,
+			item_latitude as itemLatitude,
+			code2,
+			code1,
+			address,
+			addr4,
+			addr3,
+			addr2,
+			addr1,
+			ptz_yn as ptzYn,
+			direction,
+			c.code_val as directionImg,
+			c.code_desc as directionDesc
+		FROM ves_item_latnlng a
+		LEFT OUTER JOIN ves_code b on a.item_type = b.code_key and b.code_group = '115'
+		LEFT OUTER JOIN ves_code c ON a.direction = c.code_key AND c.code_group = '116'
+		<where>
+		    code1 <![CDATA[<>]]> ''
+		    <if test="code1 != null and code1 != '' ">
+				AND (code1 = #{code1} or code1 LIKE CONCAT(#{code1},'%'))
+			</if>
+			<if test="addr2 != null and addr2 != '' ">
+				AND addr2 = #{addr2}
+			</if>
+			<if test="addr3 == null or addr3 == ''">
+		    	AND item_longitude > 0
+				AND item_latitude > 0
+		    </if>
+			<if test="address != null and address != '' ">
+				<![CDATA[ AND address LIKE CONCAT('%', #{address}, '%') ]]>
+			</if>
+			<if test="arrVideoId != null and arrVideoId != '' ">
+				AND code1 IN 
+				<foreach item="videoIdStr" collection="arrVideoId" index="idx" open="(" close=")" separator=",">
+					#{videoIdStr}
+				</foreach>
+			</if>
+		</where>
+	</select>
+	
+	<select id="selectNearMarkerList" parameterType="ItemLatlngDto" resultType="ItemLatlngDto">
+		SELECT *, (6371*acos(cos(radians(#{itemLatitude}))*cos(radians(item_latitude))*cos(radians(item_longitude) -radians(#{itemLongitude}))+sin(radians(#{itemLatitude}))*sin(radians(item_latitude)))) AS radius
+		FROM ves_item_latnlng
+		HAVING radius &lt;= (#{radius}/1000)
+		ORDER BY radius 
+		LIMIT 0,1000
+	</select>
+	
+	<!-- 
+	<select id="selectNearMarkerList" parameterType="ItemLatlngDto" resultType="ItemLatlngDto">
+		SELECT 
+			managecode,
+			code1,
+			item_latitude as itemLatitude,
+			item_longitude as itemLongitude,
+			(item_longitude - #{itemLongitude}) * (item_longitude - #{itemLongitude}) 
+			+ (item_latitude - #{itemLatitude}) * (item_latitude - #{itemLatitude}) AS col
+		FROM ves_item_latnlng
+		ORDER BY col ASC
+		LIMIT 0, 10
+	</select> -->
+	
+	<select id="checkMarkerInfo" parameterType="ItemLatlngDto" resultType="int">
+		SELECT COUNT(*) FROM ves_item_latnlng 
+		<where>
+			<if test="managecode != null and managecode != ''">
+			AND managecode = #{managecode}
+			</if>
+			<if test="code1 != null and code1 != ''">
+			AND code1 = #{code1}
+			</if>
+			<if test="code2 != null and code2 != ''">
+			AND code2 = #{code2}
+			</if>
+		</where>
+	</select>
+	
+	<delete id="deleteMarkerInfo" parameterType="ItemLatlngDto">
+		DELETE FROM ves_item_latnlng 
+		<where>
+			<if test="managecode != null and managecode != ''">
+			AND managecode = #{managecode}
+			</if>
+			<if test="code1 != null and code1 != ''">
+			AND code1 = #{code1}
+			</if>
+			<if test="code2 != null and code2 != ''">
+			AND code2 = #{code2}
+			</if>
+		</where>
+	</delete>
+	
+	<insert id="insertMarkerInfo" parameterType="ItemLatlngDto">
+		INSERT INTO ves_item_latnlng(
+			item_type
+			,managecode
+			,code1
+			,code2
+			,item_latitude
+			,item_longitude
+			,address
+			,addr1
+			,addr2
+			,addr3
+			,addr4
+			,ptz_yn
+			,direction
+		) VALUES (
+			#{itemType}
+			,#{managecode}
+			,#{code1}
+			,#{code2}
+			,#{itemLatitude}
+			,#{itemLongitude}
+			,#{address}
+			,#{addr1}
+			,#{addr2}
+			,#{addr3}
+			,#{addr4}
+			,#{ptzYn}
+			,#{direction}
+		)
+		<selectKey keyProperty="no" resultType="Integer" order="AFTER">
+			SELECT LAST_INSERT_ID()
+		</selectKey>
+	</insert>
+	
+	<select id="selectDongCenterMarkerList" parameterType="MapStatDto" resultType="map">
+	    SELECT 
+	    	l.locations_id as no,
+	    	l.location_city as addr1,
+	    	l.location_gu as addr2,
+	    	l.location_dong as addr3,
+	    	l.center_latitude as itemLatitude,
+	    	l.center_longitude as itemLongitude,
+	    	IFNULL(i.applyCnt,0) as applyCnt,
+	    	c.code_val AS imageSrc
+		FROM ves_locations l
+		LEFT JOIN (
+					SELECT a.addr3, count(*) AS applyCnt 
+					FROM ves_item a
+					LEFT JOIN ves_item_result b ON a.item_serial = b.item_serial 
+					<where>
+						a.vei_status != 3
+						<if test="searchStDate != null and searchStDate != '' ">
+							AND DATE_FORMAT(a.req_date, '%Y%m%d') BETWEEN #{searchStDate} AND #{searchEdDate}
+							AND HOUR(a.req_date) in 
+							(
+								select HOUR(a.req_date) FROM ves_item_result
+								<where>
+								<if test="timeSlot00 != null and timeSlot00 != ''">
+									or HOUR(a.req_date) between 00 and 24
+								</if>
+								<if test="timeSlot07 != null and timeSlot07 != ''">
+									or HOUR(a.req_date) between 07 and 18
+								</if>
+								<if test="timeSlot18 != null and timeSlot18 != ''">
+									or HOUR(a.req_date) between 18 and 22
+								</if>
+								<if test="timeSlot22 != null and timeSlot22 != ''">
+									or (HOUR(a.req_date) between 22 and 23 or HOUR(a.req_date) between 00 and 03)
+								</if>
+								<if test="timeSlot03 != null and timeSlot03 != ''">
+									or HOUR(a.req_date) between 03 and 07
+								</if>
+								</where>
+							)
+						</if>
+					</where>
+					GROUP BY a.addr3
+		) i ON i.addr3 = l.location_dong
+	    ,(SELECT code_val FROM ves_code WHERE code_group = 121 AND code_key = 0) c
+		WHERE l.location_gu = #{locationGu}
+		AND (l.location_dong != '' AND l.location_dong IS NOT NULL)
+	</select>
+
+	<select id="selectCctvSyncList" parameterType="ItemLatlngDto" resultType="ItemLatlngDto">
+		SELECT
+			item_type as itemType,
+			managecode,
+			code1,
+			code2,
+			item_longitude as itemLongitude,
+			item_latitude as itemLatitude,
+			address,
+			addr4,
+			addr3,
+			addr2,
+			addr1,
+			ptz_yn as ptzYn,
+			direction
+		FROM ves_item_latnlng
+		<where>
+			code1 <![CDATA[<>]]> ''
+			AND code1 LIKE CONCAT(left(#{code1},length(#{code1})-1),'%')
+			AND item_longitude > 0
+			AND item_latitude > 0
+			AND addr3 is not null
+		</where>
+		GROUP BY code1 limit 1
+	</select>
+	
+	<update id="updateCctvSyncAddress" parameterType="ItemLatlngDto">
+		UPDATE ves_item_latnlng
+		SET 
+			address = #{address},
+			addr1 = #{addr1},
+			addr2 = #{addr2},
+			addr3 = #{addr3}
+		<where>
+			code1 <![CDATA[<>]]> ''
+			and code1 LIKE CONCAT(#{code1},'%')
+			and item_latitude = 0
+			and item_longitude = 0
+		</where>
+	</update>
+</mapper>

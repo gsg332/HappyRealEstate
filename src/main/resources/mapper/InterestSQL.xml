@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.happyJ.realestate.dao.InterestDao">
+	
+	<insert id="addInterest" parameterType="InterestDto">
+		INSERT INTO INTEREST_REGION_AND_REALESTATE(
+			u_mem_id,
+			u_region_id,
+			u_re_id,
+			type,
+			level
+		) VALUES (
+			#{uMemId},
+			#{uRegionId},
+			#{uReId},
+			#{type},
+			#{level}
+		)
+		<selectKey keyProperty="u_interest_id" resultType="Long" order="AFTER">
+			SELECT LAST_INSERT_ID()
+		</selectKey>
+	</insert>
+	
+	<select id="existSubInterestCheck" parameterType="InterestDto" resultType="int">
+		SELECT COUNT(*)
+		FROM INTEREST_REGION_AND_REALESTATE irar
+		LEFT JOIN REGION r ON r.u_region_id = irar.u_region_id,
+		(
+			SELECT sido, sgg, emd, ri
+			FROM REGION
+			WHERE u_region_id = #{uRegionId}
+		) chk
+		<where>
+		    u_mem_id = #{uMemId}
+			AND irar.u_interest_id != #{uInterestId}
+			AND chk.sido = r.sido
+			AND chk.sgg = r.sgg
+			AND IF(chk.emd IS NULL, 1=1, chk.emd = r.emd)
+			AND IF(chk.ri IS NULL, 1=1, chk.ri = r.ri)    
+		</where>
+	</select>
+	
+	<delete id="deleteInterest" parameterType="InterestDto">
+		DELETE FROM INTEREST_REGION_AND_REALESTATE
+		<where>
+		    u_mem_id = #{uMemId}
+		    <choose>
+		        <when test="@org.apache.commons.lang.StringUtils@isNotBlank(uReId)">
+		        	AND u_re_id = #{uReId}    
+		        </when>
+		        <otherwise>
+					AND u_region_id = #{uRegionId}		            
+		        </otherwise>
+		    </choose>
+		</where>  
+	</delete>
+	
+	<select id="selectInterestList" parameterType="InterestDto" resultType="InterestDto">
+		SELECT 
+			irar.u_interest_id uInterestId,
+			irar.u_mem_id uMemId,
+			irar.u_region_id uRegionId,
+			irar.u_re_id uReId,
+			irar.type type,
+			irar.level level,
+			irar.reg_date regDate,
+			r.sido sido,
+			r.sgg sgg,
+			r.emd emd,
+			r.ri ri,
+			re.re_name 'reName'
+		FROM (
+				SELECT *
+			  	FROM INTEREST_REGION_AND_REALESTATE 
+			  	WHERE u_mem_id = #{uMemId}
+			  ) irar
+		LEFT JOIN REGION r ON r.u_region_id = irar.u_region_id
+		LEFT JOIN REAL_ESTATE re ON re.u_re_id = irar.u_re_id
+		ORDER BY r.sido, r.sgg, r.emd, r.ri, re.re_name  
+	</select>
+	
+	<select id="selectGroupInterestList" parameterType="InterestDto" resultType="InterestDto">
+		SELECT 
+			irar.u_interest_id uInterestId,
+			irar.u_mem_id uMemId,
+			irar.u_region_id uRegionId,
+			irar.u_re_id uReId,
+			irar.type type,
+			irar.level level,
+			irar.reg_date regDate,
+			r.sido sido,
+			r.sgg sgg,
+			r.emd emd,
+			r.ri ri,
+			re.re_name 'reName'
+		FROM INTEREST_REGION_AND_REALESTATE irar
+		LEFT JOIN REGION r ON r.u_region_id = irar.u_region_id
+		LEFT JOIN REAL_ESTATE re ON re.u_re_id = irar.u_re_id
+		GROUP BY r.sido, r.sgg, r.emd, r.ri, re.re_name
+		ORDER BY r.sido, r.sgg, r.emd, r.ri, re.re_name  
+	</select>
+	
+</mapper>

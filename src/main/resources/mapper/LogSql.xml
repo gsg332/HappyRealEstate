@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.happyJ.realestate.dao.LogDao">
+
+	<select id="selectLogList" parameterType="LogDto" resultType="LogDto">
+		SELECT * FROM (SELECT @ROWNUM := @ROWNUM +1 AS RNUM, A.* FROM (
+			SELECT
+				log_serial as logSerial,
+				item_serial as itemSerial,
+				date_format(play_time, '%Y-%m-%d %H:%i:%s') as playTime,
+				userid as userid,
+				ipaddr as ipaddr,
+				log_type as logType
+			FROM ves_log
+			<where>
+				item_serial = #{itemSerial}
+			</where>
+			ORDER BY log_serial DESC
+		) A, (SELECT @ROWNUM := 0) R) TB
+		WHERE RNUM BETWEEN ((#{currentPage} - 1) * #{rowSize} + 1) AND (#{currentPage} * #{rowSize})
+	</select>
+	
+	<select id="selectLogListCount" parameterType="LogDto" resultType="int">
+		SELECT COUNT(*)
+		FROM ves_log
+		<where>
+			item_serial = #{itemSerial}
+		</where>
+		ORDER BY log_serial DESC
+	</select>
+	
+	<select id="searchLogListExcel" parameterType="LogDto" resultType="LogDto">
+		SELECT * FROM (SELECT @ROWNUM := @ROWNUM +1 AS RNUM, A.* FROM (
+			SELECT
+				log_serial as logSerial,
+				item_serial as itemSerial,
+				date_format(play_time, '%Y-%m-%d %H:%i:%s') as playTime,
+				userid as userid,
+				ipaddr as ipaddr,
+				log_type as logType
+			FROM ves_log
+			<where>
+				item_serial = #{itemSerial}
+			</where>
+			ORDER BY log_serial DESC
+		) A, (SELECT @ROWNUM := 0) R) TB
+	</select>
+	<insert id="insertLogInfo" parameterType="LogDto">
+		INSERT INTO ves_log (
+			item_serial,
+			play_time,
+			userid,
+			ipaddr,
+			log_type
+		)
+		VALUES (
+			#{itemSerial},
+			now(),
+			#{userid},
+			#{ipaddr},
+			#{logType}
+		)
+	</insert>
+</mapper>

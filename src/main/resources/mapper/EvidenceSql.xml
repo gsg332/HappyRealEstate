@@ -1,0 +1,315 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.happyJ.realestate.dao.EvidenceDao">
+	
+	<select id="selectEvidenceList" parameterType="EvidenceCustomDto" resultType="EvidenceCustomDto">
+		SELECT * FROM (SELECT @ROWNUM := @ROWNUM +1 AS RNUM, A.* FROM (
+			SELECT 
+				b.evi_item_no as eviItemNo,
+				a.item_serial as itemSerial,
+				b.evi_userid as eviUserid,
+				b.evi_req_userid as eviReqUserid,
+				b.permit as permit,
+				c.code_val as permitNm,
+				date_format(b.evi_item_date, '%Y-%m-%d %H:%i:%s') as eviItemDate,
+				date_format(b.evi_limit_date, '%Y-%m-%d %H:%i:%s') as eviLimitDate
+			FROM ves_item a, ves_item_evidence b, ves_code c
+			<where>
+				a.item_serial = b.item_serial
+				AND b.permit = c.code_key AND c.code_group = '110'
+				<if test="level != null and level != ''">
+   					<if test="level != 8 and level != 9">
+	       			AND b.evi_req_userid = #{userId}
+	       			</if>
+	       		</if>				
+				<if test="searchPermit != null and searchPermit != '' ">
+					AND b.permit = #{searchPermit}
+				</if>
+				<if test="searchWord != null and searchWord != '' ">
+					<![CDATA[ AND b.evi_req_userid LIKE CONCAT('%', #{searchWord}, '%') ]]>
+				</if>				
+			</where>
+			ORDER BY evi_item_no DESC
+		) A, (SELECT @ROWNUM := 0) R) TB
+		WHERE RNUM BETWEEN ((#{currentPage} - 1) * #{rowSize} + 1) AND (#{currentPage} * #{rowSize})
+	</select>
+
+	<select id="selectEvidenceListCount" parameterType="EvidenceCustomDto" resultType="int">
+		SELECT COUNT(*)
+		FROM ves_item a, ves_item_evidence b, ves_code c
+		<where>
+			a.item_serial = b.item_serial
+			AND b.permit = c.code_key AND c.code_group = '110'
+			<if test="level != null and level != ''">
+  				<if test="level != 8 and level != 9">
+       			AND b.evi_req_userid = #{userId}
+       			</if>
+       		</if>				
+			<if test="searchPermit != null and searchPermit != '' ">
+				AND b.permit = #{searchPermit}
+			</if>
+			<if test="searchWord != null and searchWord != '' ">
+				<![CDATA[ AND b.evi_req_userid LIKE CONCAT('%', #{searchWord}, '%') ]]>
+			</if>			
+		</where>		
+		ORDER BY evi_item_no DESC
+	</select>
+
+	<select id="selectEvidenceListExcel" parameterType="EvidenceCustomDto" resultType="EvidenceCustomDto">
+		SELECT 
+			b.evi_item_no as eviItemNo,
+			a.item_serial as itemSerial,
+			b.evi_userid as eviUserid,
+			b.evi_req_userid as eviReqUserid,
+			b.permit as permit,
+			c.code_val as permitNm,
+			date_format(b.evi_item_date, '%Y-%m-%d %H:%i:%s') as eviItemDate,
+			date_format(b.evi_limit_date, '%Y-%m-%d %H:%i:%s') as eviLimitDate
+		FROM ves_item a, ves_item_evidence b, ves_code c
+		<where>
+			a.item_serial = b.item_serial
+			AND b.permit = c.code_key AND c.code_group = '110'
+			<if test="level != null and level != ''">
+  				<if test="level != 8 and level != 9">
+       			AND b.evi_req_userid = #{userId}
+       			</if>
+       		</if>				
+			<if test="searchPermit != null and searchPermit != '' ">
+				AND b.permit = #{searchPermit}
+			</if>
+			<if test="searchWord != null and searchWord != '' ">
+				<![CDATA[ AND b.evi_req_userid LIKE CONCAT('%', #{searchWord}, '%') ]]>
+			</if>			
+		</where>
+		ORDER BY evi_item_no DESC
+	</select>
+	
+	<select id="selectEvidenceInfo" parameterType="EvidenceCustomDto" resultType="EvidenceCustomDto">
+		SELECT 
+			evi_item_no as eviItemNo,
+			evi_item_date as eviItemDate,
+			evi_req_userid as eviReqUserid,
+			evi_userid eviUserid,
+			evi_userpass eviUserpass,
+			evi_limit_count eviLimitCount,
+			evi_limit_date eviLimitDate,
+			a.item_serial itemSerial,
+			a.userid as userId,
+			req_userid as reqUserId,
+			req_date as reqDate,
+			position,
+			depart,
+			team,
+			req_username as reqUsername,
+			req_phone as reqPhone,
+			req_reason_code as reqReasonCode,
+			req_reason as reqReason,
+			req_position as reqPosition,
+			video_id as videoId,
+			video_start as videoStart,
+			video_end as videoEnd,
+			video_position as videoPosition,
+			media_code as mediaCode,
+			vei_license_code as veiLicenseCode,
+			vei_limit_count as veiLimitCount,
+			IF((a.evi_limit_count - b.cnt) is null, a.evi_limit_count, (a.evi_limit_count - b.cnt)) as modLimit,
+			IFNULL(b.cnt,0) as playCount,
+			vei_limit_datetime as veiLimitDatetime,
+			vei_crypt_key as veiCryptKey,
+			vei_status as veiStatus,
+			vei_dn_limit_date as veiDnLimitDate,
+			vei_dn_limit_count as veiDnLimitCount,
+			vei_reject_reason veiRejectReason,
+			addr1,
+			addr2,
+			addr3,
+			addr4,
+			lat,
+			lng,
+			vei_doc_no as veidocNo,
+			vei_req_type as veiReqType,
+			viewer_birthday as viewerBirthday,
+			viewer_address as viewerAddress,
+			viewer_reason as viewerReason,
+			extention_apply as extentionApply,
+			org_item_serial as orgItemSerial,
+			reapply_reason as reapplyReason,
+			a.permit
+		FROM ves_item_evidence a
+		LEFT OUTER JOIN (
+			SELECT item_serial, SUM(1) as cnt 
+			FROM ves_log 
+			WHERE log_type = 1 
+			GROUP BY item_serial
+		) b ON a.item_serial = b.item_serial
+		<where>
+			<if test="itemSerial != null and itemSerial != '' ">
+			a.item_serial = #{itemSerial}
+			</if>
+			<if test="eviUserid != null and eviUserid != '' ">
+			AND a.evi_userid = #{eviUserid}
+			</if>
+			<if test="eviUserpass != null and eviUserpass != '' ">
+			AND a.evi_userpass = password(#{eviUserpass})
+			</if>
+			<if test="permit != null and permit != '' ">
+			AND a.permit = #{permit}
+			</if>
+		</where>
+	</select>
+	
+	<update id="updateEvidenceInfo" parameterType="EvidenceCustomDto">
+		UPDATE ves_item_evidence
+		<set>
+			<if test="eviItemDate != null and eviItemDate != '' ">evi_item_date = #{eviItemDate},</if>
+			<if test="eviReqUserid != null and eviReqUserid != '' ">evi_req_userid = #{eviReqUserid},</if>
+			<if test="eviUserid != null and eviUserid != '' ">evi_userid = #{eviUserid},</if>
+			<if test="eviUserpass != null and eviUserpass != '' ">evi_userpass = #{eviUserpass},</if>
+			<if test="eviLimitCount != null and eviLimitCount != '' ">evi_limit_count = #{eviLimitCount},</if>
+			<if test="eviLimitDate != null and eviLimitDate != '' ">evi_limit_date = #{eviLimitDate},</if>
+			<if test="itemSerial != null and itemSerial != '' ">item_serial = #{itemSerial},</if>
+			<if test="userId != null and userId != '' ">userid = #{userId},</if>
+			<if test="reqUserId != null and reqUserId != '' ">req_userid = #{reqUserId},</if>
+			<if test="reqDate != null and reqDate != '' ">req_date = #{reqDate},</if>
+			<if test="position != null and position != '' ">position = #{position},</if>
+			<if test="depart != null and depart != '' ">depart = #{depart},</if>
+			<if test="team != null and team != '' ">team = #{team},</if>
+			<if test="reqUsername != null and reqUsername != '' ">req_username = #{reqUsername},</if>
+			<if test="reqPhone != null and reqPhone != '' ">req_phone = #{reqPhone},</if>
+			<if test="reqReasonCode != null and reqReasonCode != '' ">req_reason_code = #{reqReasonCode},</if>
+			<if test="reqReason != null and reqReason != '' ">req_reason = #{reqReason},</if>
+			<if test="reqPosition != null and reqPosition != '' ">req_position = #{reqPosition},</if>
+			<if test="videoId != null and videoId != '' ">video_id = #{videoId},</if>
+			<if test="videoStart != null and videoStart != '' ">video_start = #{videoStart},</if>
+			<if test="videoEnd != null and videoEnd != '' ">video_end = #{videoEnd},</if>
+			<if test="videoPosition != null and videoPosition != '' ">video_position = #{videoPosition},</if>
+			<if test="mediaCode != null and mediaCode != '' ">media_code = #{mediaCode},</if>
+			<if test="veiLicenseCode != null and veiLicenseCode != '' ">vei_license_code = #{veiLicenseCode},</if>
+			<if test="veiLimitCount != null and veiLimitCount != '' ">vei_limit_count = #{veiLimitCount},</if>
+			<if test="veiLimitDatetime != null and veiLimitDatetime != '' ">vei_limit_datetime = #{veiLimitDatetime},</if>
+			<if test="veiCryptKey != null and veiCryptKey != '' ">vei_crypt_key = #{veiCryptKey},</if>
+			<if test="veiStatus != null and veiStatus != '' ">vei_status = #{veiStatus},</if>
+			<if test="veiDnLimitDate != null and veiDnLimitDate != '' ">vei_dn_limit_date = #{veiDnLimitDate},</if>
+			<if test="veiDnLimitCount != null and veiDnLimitCount != '' ">vei_dn_limit_count = #{veiDnLimitCount},</if>
+			<if test="veiRejectReason != null and veiRejectReason != '' ">vei_reject_reason = #{veiRejectReason},</if>
+			<if test="addr1 != null and addr1 != '' ">addr1 = #{addr1},</if>
+			<if test="addr2 != null and addr2 != '' ">addr2 = #{addr2},</if>
+			<if test="addr3 != null and addr3 != '' ">addr3 = #{addr3},</if>
+			<if test="addr4 != null and addr4 != '' ">addr4 = #{addr4},</if>
+			<if test="lat != null and lat != '' ">lat = #{lat},</if>
+			<if test="lng != null and lng != '' ">lng = #{lng},</if>
+			<if test="veiDocNo != null and veiDocNo != '' ">vei_doc_no = #{veiDocNo},</if>
+			<if test="veiReqType != null and veiReqType != '' ">vei_req_type = #{veiReqType},</if>
+			<if test="viewerBirthday != null and viewerBirthday != '' ">viewer_birthday = #{viewerBirthday},</if>
+			<if test="viewerAddress != null and viewerAddress != '' ">viewer_address = #{viewerAddress},</if>
+			<if test="viewerReason != null and viewerReason != '' ">viewer_reason = #{viewerReason},</if>
+			<if test="extentionApply != null and extentionApply != '' ">extention_apply = #{extentionApply},</if>
+			<if test="orgItemSerial != null and orgItemSerial != '' ">org_item_serial = #{orgItemSerial},</if>
+			<if test="reapplyReason != null and reapplyReason != '' ">reapply_reason = #{reapplyReason},</if>			
+			<if test="permit != null and permit != '' ">permit = #{permit}</if>		
+		</set>
+		<where>
+			evi_item_no = #{eviItemNo}
+		</where>
+	</update>	
+	
+	<insert id="insertEvidenceInfo" parameterType="EvidenceCustomDto">
+		INSERT INTO ves_item_evidence(
+			evi_item_date
+			,evi_req_userid
+			,evi_userid
+			,evi_userpass
+			,evi_limit_count
+			,evi_limit_date
+			,item_serial
+			,userid
+			,req_userid
+			,req_date
+			,position
+			,depart
+			,team
+			,req_username
+			,req_phone
+			,req_reason_code
+			,req_reason
+			,req_position
+			,video_id
+			,video_start
+			,video_end
+			,video_position
+			,media_code
+			,vei_license_code
+			,vei_limit_count
+			,vei_limit_datetime
+			,vei_crypt_key
+			,vei_status
+			,vei_dn_limit_date
+			,vei_dn_limit_count
+			,vei_reject_reason
+			,addr1
+			,addr2
+			,addr3
+			,addr4
+			,lat
+			,lng
+			,vei_doc_no
+			,vei_req_type
+			,viewer_birthday
+			,viewer_address
+			,viewer_reason
+			,extention_apply
+			,org_item_serial
+			,reapply_reason
+		) SELECT 
+			NOW()
+			,#{userId}
+			,#{eviUserid}
+			,password(#{eviUserpass})
+			,100
+			,STR_TO_DATE(CONCAT(DATE_FORMAT(ADDDATE(CURDATE(), INTERVAL #{eviLimitDate} YEAR), '%Y-%m-%d'), ' 23:59:59'), '%Y-%m-%d %H:%i:%s')
+			,item_serial
+			,userid
+			,req_userid
+			,req_date
+			,position
+			,depart
+			,team
+			,req_username
+			,req_phone
+			,req_reason_code
+			,req_reason
+			,req_position
+			,video_id
+			,video_start
+			,video_end
+			,video_position
+			,media_code
+			,vei_license_code
+			,vei_limit_count
+			,vei_limit_datetime
+			,vei_crypt_key
+			,vei_status
+			,vei_dn_limit_date
+			,vei_dn_limit_count
+			,vei_reject_reason
+			,addr1
+			,addr2
+			,addr3
+			,addr4
+			,lat
+			,lng
+			,vei_doc_no
+			,vei_req_type
+			,viewer_birthday
+			,viewer_address
+			,viewer_reason
+			,extention_apply
+			,org_item_serial
+			,reapply_reason
+		FROM ves_item
+		WHERE item_serial = #{itemSerial}
+		<selectKey keyProperty="evi_item_no" resultType="Integer" order="AFTER">
+			SELECT LAST_INSERT_ID()
+		</selectKey>
+	</insert>
+</mapper>

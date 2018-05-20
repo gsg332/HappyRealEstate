@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.happyJ.realestate.dao.RegionDao">
+	
+	<insert id="insertRegion" parameterType="RegionDto">
+		INSERT INTO REGION(
+			u_region_id,
+			p_u_region_id,
+			sido,
+			sgg,
+			emd,
+			ri,
+			people_cnt,
+			apt_cnt,
+			grade_school_cnt,
+			middle_school_cnt,
+			high_school_cnt,
+			university_cnt
+		) VALUES (
+			#{uRegionId},
+			#{pURegionId},
+			#{sido},
+			#{sgg},
+			#{emd},
+			#{ri},
+			#{peopleCnt},
+			#{aptCnt},
+			#{gradeSchoolCnt},
+			#{middleSchoolCnt},
+			#{highSchoolCnt},
+			#{universityCnt}
+		)
+		ON DUPLICATE KEY UPDATE
+			u_region_id = #{uRegionId},
+			p_u_region_id = #{pURegionId},
+			sido = #{sido},
+			sgg = #{sgg},
+			emd = #{emd},
+			ri = #{ri},
+			people_cnt = #peopleCnt},
+			apt_cnt = #{aptCnt},
+			grade_school_cnt = #{gradeSchoolCnt},
+			middle_school_cnt = #{middleSchoolCnt},
+			high_school_cnt = #{highSchoolCnt},
+			university_cnt = #{universityCnt}
+		<selectKey keyProperty="u_region_id" resultType="Long" order="AFTER">
+			SELECT LAST_INSERT_ID()
+		</selectKey>
+	</insert>
+	
+	<delete id="deleteRegion" parameterType="RegionDto">
+		DELETE FROM REGION
+		WHERE u_region_id = #{uInterestId} 
+	</delete>
+	
+	<select id="selectRegionList" parameterType="RegionDto" resultType="RegionDto">
+		SELECT 
+			u_region_id uRegionId,
+			p_u_region_id pURegionId,
+			sido sido,
+			sgg sgg,
+			emd emd,
+			ri ri,
+			people_cnt peopleCnt,
+			apt_cnt aptCnt,
+			grade_school_cnt qradeSchoolCnt,
+			middle_school_cnt middleSchoolCnt,
+			high_school_cnt highSchoolCnt,
+			university_cnt universityCnt
+		FROM REGION
+		<where>
+			<choose>
+			    <when test="pURegionId != null and pURegionId != ''">
+				    p_u_region_id = #{pURegionId}
+			    </when>
+			    <when test="sido == null or sido == ''">
+				    sido IS NOT NULL
+				    AND sgg IS NULL
+				    AND emd IS NULL
+			    </when>
+				<when test="sido == null or sido == ''">
+				    sido IS NOT NULL
+				    AND sgg IS NULL
+				    AND emd IS NULL
+			    </when>
+			    <otherwise>
+					sido = #{sido}
+					AND sgg = #{sgg}
+					AND emd = #{emd}			        
+			    </otherwise>
+		    </choose>
+		</where>
+		ORDER BY sido, sgg, emd, ri  
+	</select>
+	
+</mapper>

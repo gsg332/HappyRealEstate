@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:task="http://www.springframework.org/schema/task"
+	xmlns:util="http://www.springframework.org/schema/util"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans 
+		http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/tx 
+		http://www.springframework.org/schema/tx/spring-tx.xsd
+		http://www.springframework.org/schema/task 
+		http://www.springframework.org/schema/task/spring-task-3.1.xsd
+		http://www.springframework.org/schema/context 
+		http://www.springframework.org/schema/context/spring-context.xsd
+		http://www.springframework.org/schema/util 
+		http://www.springframework.org/schema/util/spring-util-3.0.xsd">
+	
+	<context:component-scan base-package="com">
+        <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller" />
+        <context:exclude-filter type="annotation" expression="org.springframework.web.bind.annotation.ControllerAdvice" />
+	</context:component-scan>
+	
+	<bean id="urgentSaleSaveScheduler" class="org.springframework.scheduling.quartz.JobDetailBean"
+		p:jobClass="com.happyJ.realestate.schedule.UrgentSaleSave" p:applicationContextJobDataKey="applicationContext1" />
+	<bean id="apartSaleSaveScheduler" class="org.springframework.scheduling.quartz.JobDetailBean"
+		p:jobClass="com.happyJ.realestate.schedule.ApartSave"  p:applicationContextJobDataKey="applicationContext2"/>
+	<bean id="urgentSaleSaveTrigger" class="org.springframework.scheduling.quartz.CronTriggerBean"
+		p:jobDetail-ref="urgentSaleSaveScheduler" p:cronExpression="0 0 5 * * ?" />
+	 <bean id="apartSaleSaveTrigger" class="org.springframework.scheduling.quartz.CronTriggerBean"
+		p:jobDetail-ref="apartSaleSaveScheduler" p:cronExpression="0 0 4 1 * ?" />
+	<!-- <bean id="apartSaleSaveTrigger" class="org.springframework.scheduling.quartz.CronTriggerBean"
+		p:jobDetail-ref="apartSaleSaveScheduler" p:cronExpression="0/10 * * * * ?" /> -->
+	<bean class="org.springframework.scheduling.quartz.SchedulerFactoryBean">
+		<property name="triggers">
+			<list>
+				<ref bean="urgentSaleSaveTrigger" />
+				<ref bean="apartSaleSaveTrigger" />
+			</list>
+		</property>
+	</bean>
+	
+	<bean id="ApartService" class="com.happyJ.realestate.service.ApartService"/>
+	<bean id="RegionService" class="com.happyJ.realestate.service.RegionService"/>
+	<bean id="InterestService" class="com.happyJ.realestate.service.InterestService"/>
+	<bean id="UrgentSaleService" class="com.happyJ.realestate.service.UrgentSaleService"/>
+	
+	
+	
+	<!-- enable the configuration of transactional behavior based on annotations -->
+	<tx:annotation-driven transaction-manager="transactionManager" />
+	
+	<util:properties id="message" location="classpath:message/message-common.xml" />
+	
+	<!-- Saves a locale change using a cookie -->
+	<bean id="localeResolver" class="org.springframework.web.servlet.i18n.CookieLocaleResolver" />
+ 
+	<bean id="beanNameResolver" class="org.springframework.web.servlet.view.BeanNameViewResolver" >
+		  <property name="order" value="0"/>
+	</bean>
+	
+	<bean id="exceptionResolver" class="org.springframework.web.servlet.handler.SimpleMappingExceptionResolver">
+        <!-- 예외 클래스 이름으로 맵핑 되는 페이지를 설정 할 수 있습니다. 
+	    <property name="mappedHandlers">
+	        <props>
+	            <prop key="DataAccessException">error/dao</prop>
+	            <prop key="BusinessLogicException">error/login</prop>
+	        </props>
+	    </property>
+        -->
+	</bean>
+
+    <bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver"/>
+    
+    <bean name="lenient" class="net.sf.json.util.CycleDetectionStrategy$LenientCycleDetectionStrategy"/>
+    
+    <bean name="jsonConfig" class="net.sf.json.JsonConfig">
+       <property name="cycleDetectionStrategy" ref="lenient" />
+    </bean>
+    
+    <bean name="jsonView" class="net.sf.json.spring.web.servlet.view.JsonView" >
+       <property name="jsonConfig" ref="jsonConfig" />
+       <property name="contentType" value="application/json;charset=UTF-8" />
+    </bean>
+    
+    <!-- viewResolver -->
+    <bean id="imageView" class="com.happyJ.realestate.common.view.ImageView" />
+    
+    <!-- Excel View -->
+    <bean name="applyListExcelView" class="com.happyJ.realestate.common.excel.ApplyListExcelView"/>
+    <bean name="rejectListExcelView" class="com.happyJ.realestate.common.excel.RejectListExcelView"/>
+    <bean name="extendListExcelView" class="com.happyJ.realestate.common.excel.ExtendListExcelView"/>
+    <bean name="evidenceListExcelView" class="com.happyJ.realestate.common.excel.EvidenceListExcelView"/>
+    <bean name="actionHistoryListExcelView" class="com.happyJ.realestate.common.excel.ActionHistoryListExcelView"/>
+    <bean name="joinListExcelView" class="com.happyJ.realestate.common.excel.JoinListExcelView"/>
+    <bean name="changeReqListExcelView" class="com.happyJ.realestate.common.excel.ChangeReqListExcelView"/>
+    <bean name="adminChangeReqListExcelView" class="com.happyJ.realestate.common.excel.AdminChangeReqListExcelView"/>
+    <bean name="resultListExcelView" class="com.happyJ.realestate.common.excel.ResultListExcelView"/>
+    <bean name="playListExcelView" class="com.happyJ.realestate.common.excel.PlayListExcelView"/>
+    <bean name="areaStatListExcelView" class="com.happyJ.realestate.common.excel.AreaStatListExcelView"/>
+    <bean name="typeAddr2StatInfoExcelView" class="com.happyJ.realestate.common.excel.TypeAddr2StatInfoExcelView"/>
+    <bean name="typeAddr3StatListExcelView" class="com.happyJ.realestate.common.excel.TypeAddr3StatListExcelView"/>
+    <bean name="typeAddr3StatInfoExcelView" class="com.happyJ.realestate.common.excel.TypeAddr3StatInfoExcelView"/>
+    <bean name="cctvInstAddr2StatInfoExcelView" class="com.happyJ.realestate.common.excel.CctvInstAddr2StatInfoExcelView"/>
+    <bean name="cctvInstAddr3StatListExcelView" class="com.happyJ.realestate.common.excel.CctvInstAddr3StatListExcelView"/>
+    <bean name="cctvInstAddr3StatInfoExcelView" class="com.happyJ.realestate.common.excel.CctvInstAddr3StatInfoExcelView"/>
+</beans>

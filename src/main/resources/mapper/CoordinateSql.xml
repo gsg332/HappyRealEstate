@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.happyJ.realestate.dao.CoordinateDao">
+
+	<select id="selectCoordinateList" parameterType="CoordinateDto" resultType="CoordinateDto">
+		SELECT 
+			a.locations_id as locationsId,
+			a.location_longitude as locationLongitude,
+			a.location_latitude as locationLatitude,
+			a.location_coordinate_id as locationCoordinateId,
+			a.location_altitude as locationAltitude,
+			b.location_dong as locationDong
+		FROM ves_location_coordinates a, ves_locations b
+		WHERE 
+			a.locations_id = b.locations_id
+			AND b.location_gu = #{locationGu}
+		ORDER BY a.locations_id, a.location_coordinate_id
+	</select>
+	
+	<insert id="insertCoordinate" parameterType="map">
+	    INSERT INTO ves_location_coordinates (
+			location_latitude,
+ 			location_longitude,
+ 			location_altitude,
+ 			locations_id
+ 		) VALUES (
+ 			#{lat},
+ 			#{lng},
+ 			0,
+ 			#{locationsId}
+ 		)
+	</insert>
+
+</mapper>

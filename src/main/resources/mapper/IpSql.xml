@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.happyJ.realestate.dao.IpDao">
+	
+	<select id="selectIpList" parameterType="IpDto" resultType="IpDto">
+		SELECT * FROM (SELECT @ROWNUM := @ROWNUM +1 AS rnum, A.* FROM (
+			SELECT 
+				no as no, 
+				title as title,
+				startip as startIp,
+				endip as endIp,
+				write_user as writeUser,
+				date_format(reg_date, '%Y-%m-%d %H:%i') as regDate,
+				date_format(modify_date, '%Y-%m-%d %H:%i') as modifyDate
+			FROM ves_allow_ip
+			ORDER BY no ASC
+		) A, (SELECT @ROWNUM := 0) R) TB
+		WHERE RNUM BETWEEN ((#{currentPage} - 1) * #{rowSize} + 1) AND (#{currentPage} * #{rowSize})		
+	</select>
+	
+	<select id="selectIpListAll" resultType="IpDto">
+		SELECT 
+			no as no, 
+			title as title,
+			startip as startIp,
+			endip as endIp,
+			write_user as writeUser,
+			date_format(reg_date, '%Y-%m-%d %H:%i') as regDate,
+			date_format(modify_date, '%Y-%m-%d %H:%i') as modifyDate
+		FROM ves_allow_ip
+		ORDER BY no ASC
+	</select>
+
+	<select id="ipListCount" parameterType="IpDto" resultType="int">
+		SELECT COUNT(*)
+		FROM ves_allow_ip
+	</select>	
+	
+	<update id="updateIpInfo" parameterType="IpDto">
+		UPDATE ves_allow_ip
+		<set>
+			title = #{title},
+			startip = #{startIp},
+			endip = #{endIp},
+			write_user = #{writeUser},
+			modify_date = now()
+		</set>
+		WHERE no = #{no}
+	</update>	
+	
+	<delete id="deleteIpInfo" parameterType="IpDto">
+		DELETE FROM ves_allow_ip
+		WHERE no = #{no}
+	</delete>		
+	
+	<insert id="insertIpInfo" parameterType="IpDto">
+		INSERT INTO ves_allow_ip(
+			title
+			,startip
+			,endip
+			,write_user
+			,reg_date
+		) VALUES (
+			#{title}
+			,#{startIp}
+			,#{endIp}
+			,#{writeUser}
+			,now()
+		)
+	</insert>	
+		
+</mapper>

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.happyJ.realestate.sms.SmsSendDao">
+	
+	<insert id="insertSmsSendInfo" parameterType="SmsSendDto">
+		INSERT INTO SDK_SMS_SEND(
+			USER_ID
+			,SUBJECT
+			,SMS_MSG
+			,NOW_DATE
+			,SEND_DATE
+			,CALLBACK
+			,DEST_INFO
+			,CDR_ID
+		) VALUES (
+			#{userId}
+			,#{subject}
+			,#{smsMsg}
+			,DATE_FORMAT( NOW() ,'%Y%m%d%H%i%s')
+			,DATE_FORMAT( NOW() ,'%Y%m%d%H%i%s')
+			,#{callback}
+			,#{destInfo}
+			,'1001'
+		)
+		<selectKey keyProperty="MSG_ID" resultType="Integer" order="AFTER">
+			SELECT LAST_INSERT_ID()
+		</selectKey>
+	</insert>
+	
+	<select id="selectSmsSendInfo" parameterType="SmsSendDto" resultType="SmsSendDto">
+		SELECT 
+			MSG_ID,
+			USER_ID,
+			SCHEDULE_TYPE,
+			SUBJECT,
+			SMS_MSG,
+			CALLBACK_URL,
+			NOW_DATE,
+			SEND_DATE,
+			CALLBACK,
+			DEST_TYPE,
+			DEST_COUNT,
+			DEST_INFO,
+			KT_OFFICE_CODE,
+			CDR_ID,
+			RESERVED1,
+			RESERVED2,
+			RESERVED3,
+			RESERVED4,
+			RESERVED5,
+			RESERVED6,
+			SEND_STATUS,
+			SEND_COUNT,
+			SEND_RESULT,
+			SEND_PROC_TIME,
+			STD_ID
+		FROM SDK_SMS_SEND
+	</select>
+	
+</mapper>

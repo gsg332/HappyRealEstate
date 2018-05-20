@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.happyJ.realestate.dao.ResultDao">
+
+	<select id="selectResultInfo" parameterType="ItemResultDto" resultType="ItemResultDto">
+		SELECT item_serial as itemSerial,
+			item_use as itemUse,
+			item_result as itemResult,
+			result_code as resultCode,
+			result_memo as resultMemo,
+			result_disposal as resultDisposal,
+			date_format(result_time, '%Y-%m-%d %H:%i:%s') as resultTime,
+			used_video_id usedVideoId,
+			used_video_start as usedVideoStart,
+			used_video_end as usedVideoEnd,
+			date_format(result_time, '%Y-%m-%d %H:%i:%s') as resultTime
+		FROM ves_item_result
+		<where>
+			item_serial = #{itemSerial}
+		</where>
+	</select>
+
+	<insert id="insertResultInfo" parameterType="ItemResultDto">
+		INSERT INTO ves_item_result(
+			item_serial
+			,item_use
+			,item_result
+			,result_disposal
+		<if test="itemUse != null and itemUse == 0">
+			,used_video_id
+			,used_video_start
+			,used_video_end
+		</if>
+		<if test="itemUse != null and itemUse == 1 ">
+			,result_code
+			,result_memo
+		</if>
+			,result_time
+		) VALUES (
+			#{itemSerial}
+			,#{itemUse}
+			,#{itemResult}
+			,#{resultDisposal}
+		<if test="itemUse != null and itemUse == 0">
+			,#{usedVideoId}
+			,#{usedVideoStart}
+			,#{usedVideoEnd}
+		</if>
+		<if test="itemUse != null and itemUse == 1">
+			,#{resultCode}
+			,#{resultMemo}
+		</if>
+			,NOW()
+		)
+	</insert>
+	
+	<update id="updateResultInfo" parameterType="ItemResultDto">
+		UPDATE ves_item_result
+		<set>
+			item_use = #{itemUse}
+			,item_result = #{itemResult}
+			,result_disposal = #{resultDisposal}
+		<if test="itemUse != null and itemUse == 0">
+			,result_code = 0
+			,result_memo = ''
+			,used_video_id = #{usedVideoId}
+			,used_video_start = #{usedVideoStart}
+			,used_video_end = #{usedVideoEnd}
+		</if>
+		<if test="itemUse != null and itemUse == 1">
+			,result_code = #{resultCode}
+			,result_memo = #{resultMemo}
+			,used_video_id = ''
+			,used_video_start = null
+			,used_video_end = null
+		</if>
+			,result_time = NOW()
+		</set>
+		<where>
+			item_serial = #{itemSerial}
+		</where>
+	</update>
+	
+</mapper>

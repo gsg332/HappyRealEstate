@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<properties>
+
+	<!-- mysql -->
+	<entry key="classname">com.mysql.jdbc.Driver</entry>
+	
+	<!-- DB -->
+	<entry key="url">jdbc:mysql://13.124.64.114:3306/happyRealEstate?characterEncoding=utf8</entry>
+	<entry key="username">happyRealEstate</entry>
+	<entry key="password">dhfpswl0</entry>
+
+	<!-- SMS DB -->
+	<entry key="sms.url">jdbc:mysql://13.124.64.114:3306/happyRealEstate</entry>
+	<entry key="sms.username">happyRealEstate</entry>
+	<entry key="sms.password">dhfpswl0</entry>
+	
+	<!-- Video File Directory Location -->
+	<entry key="video.file.path">/var/www/html/data/videodata/</entry>
+	
+	<!-- Attach File Directory Location -->
+	<entry key="attach.file.path">/var/www/html/data/</entry>
+	
+	<entry key="user.file.pledge.path">/var/www/html/data/</entry>
+	
+	<!-- CctvImage File Directory Location -->
+	<entry key="cctvimage.file.path">/var/www/html/data/cctvimage/</entry>
+	
+	<!-- ActiveX Down UseSSL -->
+	<!-- true or false -->
+	<entry key="activeX.useSSL">false</entry>
+	
+	<entry key="use.location.code">W4</entry>
+	<entry key="use.location.gu">성동구</entry>
+	
+	<!-- Function Setting Possible Admin -->
+	<entry key="function.setting.admin">w4admin</entry>
+	
+</properties>

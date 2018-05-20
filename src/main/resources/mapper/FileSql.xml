@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.happyJ.realestate.dao.FileDao">
+
+	<select id="selectFileList" parameterType="FileDto" resultType="FileDto">
+		SELECT 
+			item_no as itemNo,
+			userid as userid,
+			file_type as fileType,
+			item_serial as itemSerial,
+			temp_filename as tempFilename,
+			org_filename as orgFilename
+		FROM ves_file 
+		<where>
+			<if test="itemSerial != null and itemSerial != '' ">
+			item_serial = #{itemSerial}
+			</if>
+			<if test="itemNo != null and itemNo != '' ">
+			AND item_no = #{itemNo}
+			</if>
+			<if test="userid != null and userid != '' ">
+			AND userid = #{userid}
+			<if test="itemSerial == null or itemSerial == '' ">
+			AND item_serial is null
+			</if>
+			</if>
+			AND item_type = '0'
+		</where>
+		ORDER BY item_no ASC
+	</select>
+	
+	<insert id="insertFileInfo" parameterType="FileDto" >
+		INSERT INTO ves_file(
+			<if test="itemNo != null and itemNo != '' ">
+			item_no,
+			</if>
+			item_serial
+			,userid
+			,item_type
+			,file_type
+			,temp_filename
+			,org_filename
+			,upload_time
+			<if test="eviItemNo != null and eviItemNo != '' ">
+			,evi_item_no
+			</if>
+		) VALUES (
+			<if test="itemNo != null and itemNo != '' ">
+			#{itemNo},
+			</if>
+			#{itemSerial}
+			,#{userid}
+			,#{itemType}
+			,#{fileType}
+			,#{tempFilename}
+			,#{orgFilename}
+			,now()
+			<if test="eviItemNo != null and eviItemNo != '' ">
+			,#{eviItemNo}
+			</if>
+		)
+		ON DUPLICATE KEY UPDATE
+			item_no = #{itemNo}
+			,item_serial = #{itemSerial}
+			,userid = #{userid}
+			,item_type = #{itemType}
+			,file_type = #{fileType}
+			,temp_filename = #{tempFilename}
+			,org_filename = #{orgFilename}
+			,upload_time = now()
+			<if test="eviItemNo != null and eviItemNo != '' ">
+			,evi_item_no = #{eviItemNo}
+			</if>
+	</insert>
+	
+	<update id="updateFileInfo" parameterType="FileDto">
+		UPDATE ves_file
+		<set>
+		    <if test="userid != null and userid != '' ">
+			userid = #{userid},
+			</if>
+			<if test="itemType != null and itemType != '' ">
+			item_type = #{itemType},
+			</if>
+			<if test="fileType != null and fileType != '' ">
+			file_type = #{fileType},
+			</if>
+			<if test="tempFilename != null and tempFilename != '' ">
+			temp_filename = #{tempFilename},
+			</if>
+			<if test="orgFilename != null and orgFilename != '' ">
+			org_filename = #{orgFilename},
+			</if>
+			<if test="itemType != null and itemType != '' ">
+			item_type = #{itemType},
+			</if>
+			<if test="eviItemNo != null and eviItemNo != '' ">
+			evi_item_no = #{eviItemNo},
+			</if>
+			download_count = 0,
+			upload_time = NOW()
+		</set>
+		<where>
+			item_no = #{itemNo} AND item_serial = #{itemSerial}
+		</where>
+	</update>
+	
+	<update id="updateCctvImageFile" parameterType="ImageFileDto">
+		UPDATE ves_item_latnlng
+		<set>
+			<choose>
+				<when test="imageName != null and imageName != '' ">
+					image_name = #{imageName}
+				</when>
+				<otherwise>
+					image_name = null
+				</otherwise>
+			</choose>
+		</set>
+		<where>
+			managecode = #{manageCode}
+		</where>
+	</update>
+</mapper>

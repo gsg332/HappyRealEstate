@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.happyJ.realestate.dao.CodeDao">
+	
+	<select id="selectCodeList" parameterType="CodeDto" resultType="CodeDto">
+		SELECT 
+			code_group as codeGroup, 
+			code_key as codeKey,
+			code_fixed as codeFixed,
+			code_val as codeVal,
+			code_desc as codeDesc
+		FROM ves_code
+		<where>
+			<if test="codeGroup != null and codeGroup != '' ">
+			code_group = #{codeGroup}
+			</if>
+			<if test="codeKey != null and codeKey != '' ">
+			AND code_key = #{codeKey}
+			</if>
+			<if test="codeFixed != null and codeFixed != '' ">
+			AND code_fixed = #{codeFixed}
+			</if>
+			AND code_key <![CDATA[<>]]> '00000'
+		</where> 
+	</select>
+	
+	<select id="selectCodeGroupList" parameterType="CodeDto" resultType="CodeDto">
+		SELECT 
+			code_group as codeGroup, 
+			code_key as codeKey,
+			code_fixed as codeFixed,
+			code_val as codeVal,
+			code_desc as codeDesc
+		FROM ves_code
+		<where>
+			code_key = '00000'
+			AND code_group not in ('999', '101', '103')
+		</where> 
+		ORDER BY code_group
+	</select>	
+	
+	<select id="searchCodeGroupList" parameterType="CodeDto" resultType="CodeDto">
+		SELECT * FROM (SELECT @ROWNUM := @ROWNUM +1 AS rnum, A.* FROM (
+			SELECT 
+				code_group as codeGroup, 
+				code_key as codeKey,
+				code_fixed as codeFixed,
+				code_val as codeVal,
+				code_desc as codeDesc
+			FROM ves_code
+			<where>
+				<if test="codeGroup != null and codeGroup != '' ">
+				code_group = #{codeGroup}
+				</if>		
+				AND code_key not in ('00000', '99999')
+			</where> 
+			ORDER BY code_key
+		) A, (SELECT @ROWNUM := 0) R) TB
+		WHERE RNUM BETWEEN ((#{currentPage} - 1) * #{rowSize} + 1) AND (#{currentPage} * #{rowSize})		
+	</select>
+	
+	<select id="searchCodeGroupListCount" parameterType="CodeDto" resultType="int">
+		SELECT COUNT(*)
+		FROM ves_code
+		<where>
+			<if test="codeGroup != null and codeGroup != '' ">
+			code_group = #{codeGroup}
+			</if>		
+			AND code_key not in ('00000', '99999')
+		</where> 
+		ORDER BY code_key
+	</select>	
+	
+	<update id="updateCodeInfo" parameterType="CodeDto">
+		UPDATE ves_code
+		<set>
+			code_val = #{codeVal},
+			code_desc = #{codeDesc}
+		</set>
+		WHERE code_group = #{codeGroup} AND code_key = #{codeKey} 
+	</update>	
+	
+	<delete id="deleteCodeInfo" parameterType="CodeDto">
+		DELETE FROM ves_code
+		WHERE code_group = #{codeGroup} AND code_key = #{codeKey} 
+	</delete>		
+
+	
+	<insert id="insertCodeInfo" parameterType="CodeDto">
+		INSERT INTO ves_code(
+			code_group
+			,code_key
+			,code_fixed
+			,code_val
+			,code_desc				
+		) VALUES (
+			#{codeGroup}
+			,#{codeKey}
+			,#{codeFixed}
+			,#{codeVal}
+			,#{codeDesc}
+		)
+	</insert>		
+</mapper>

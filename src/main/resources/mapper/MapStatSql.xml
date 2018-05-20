@@ -1,0 +1,625 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.happyJ.realestate.dao.MapStatDao">
+	
+	<select id="selectAreaStatList" parameterType="MapStatDto" resultType="MapStatDto">
+		SELECT	vl.locations_id AS locationsId,
+			vl.location_gu AS locationGu,
+			vl.location_dong AS locationDong,
+			vl.center_latitude AS centerLat,
+			vl.center_longitude AS centerLng,
+			IFNULL((SELECT COUNT(addr3) AS cctvCnt FROM ves_item_latnlng WHERE vl.location_dong = addr3 GROUP BY addr3),0) cctvCnt,
+			IFNULL(crimeCnt,0) crimeCnt,
+			IFNULL(resultTotal, 0) AS resultTotal,
+			IFNULL(noon, 0) AS noon,
+			IFNULL(evening, 0) AS evening,
+			IFNULL(night, 0) AS night,
+			IFNULL(dawn, 0) AS dawn,
+			IFNULL(ROUND((resultTotal/crimeCnt) * 100,1),0) rate
+		FROM ves_locations vl
+		LEFT OUTER JOIN (
+			SELECT 
+				b.addr3,
+				COUNT(b.addr3) AS crimeCnt,
+				(SELECT COUNT(*) AS resultTotal 
+				FROM ves_item_result sb_aa
+				LEFT OUTER JOIN ves_item bb ON sb_aa.item_serial = bb.item_serial
+				LEFT OUTER JOIN ves_locations cc ON bb.addr3 = cc.location_dong
+				<where>
+					item_result IN ('0','3','4') and bb.addr3 = c.location_dong
+					<if test="searchStDate != null and searchStDate != '' ">
+					AND DATE_FORMAT(used_video_start, '%Y%m%d') BETWEEN #{searchStDate} AND #{searchEdDate}
+					AND HOUR(used_video_start) in 
+						(
+							select HOUR(used_video_start) FROM ves_item_result
+							<where>
+							<if test="timeSlot00 != null and timeSlot00 != ''">
+								or HOUR(used_video_start) between 00 and 24
+							</if>
+							<if test="timeSlot07 != null and timeSlot07 != ''">
+								or HOUR(used_video_start) between 07 and 18
+							</if>
+							<if test="timeSlot18 != null and timeSlot18 != ''">
+								or HOUR(used_video_start) between 18 and 22
+							</if>
+							<if test="timeSlot22 != null and timeSlot22 != ''">
+								or (HOUR(used_video_start) between 22 and 23 or HOUR(used_video_start) between 00 and 03)
+							</if>
+							<if test="timeSlot03 != null and timeSlot03 != ''">
+								or HOUR(used_video_start) between 03 and 07
+							</if>
+							</where>
+						)
+						</if>
+				</where>
+				group by bb.addr3
+				) AS resultTotal,
+				SUM(IF (HOUR(used_video_start) <![CDATA[>=]]> '07'
+					AND HOUR(used_video_start) <![CDATA[<]]> '18', 1, 0)) AS noon,
+				SUM(IF (HOUR(used_video_start) <![CDATA[>=]]> '18'
+					AND HOUR(used_video_start) <![CDATA[<]]> '22', 1, 0)) AS evening,
+				SUM(IF ((HOUR(used_video_start) <![CDATA[>=]]> '22'
+					AND HOUR(used_video_start) <![CDATA[<=]]> '23')
+					OR (HOUR(used_video_start) <![CDATA[>=]]> '00'
+					AND HOUR(used_video_start) <![CDATA[<]]> '03'), 1, 0)) AS night,
+				SUM(IF (HOUR(used_video_start) <![CDATA[>=]]> '03'
+					AND HOUR(used_video_start) <![CDATA[<]]> '07', 1, 0)) AS dawn
+			FROM ves_item_result sb_a
+			LEFT OUTER JOIN ves_item b ON sb_a.item_serial = b.item_serial
+			LEFT OUTER JOIN ves_locations c ON b.addr3 = c.location_dong
+			<where>
+				<if test="searchStDate != null and searchStDate != '' ">
+				DATE_FORMAT(sb_a.used_video_start, '%Y%m%d') BETWEEN #{searchStDate} AND #{searchEdDate}
+				AND HOUR(used_video_start) in 
+					(
+						select HOUR(used_video_start) FROM ves_item_result
+						<where>
+						<if test="timeSlot00 != null and timeSlot00 != ''">
+							or HOUR(used_video_start) between 00 and 24
+						</if>
+						<if test="timeSlot07 != null and timeSlot07 != ''">
+							or HOUR(used_video_start) between 07 and 18
+						</if>
+						<if test="timeSlot18 != null and timeSlot18 != ''">
+							or HOUR(used_video_start) between 18 and 22
+						</if>
+						<if test="timeSlot22 != null and timeSlot22 != ''">
+							or (HOUR(used_video_start) between 22 and 23 or HOUR(used_video_start) between 00 and 03)
+						</if>
+						<if test="timeSlot03 != null and timeSlot03 != ''">
+							or HOUR(used_video_start) between 03 and 07
+						</if>
+						</where>
+					)
+				</if>
+			</where>
+			GROUP BY b.addr3
+		) vd ON vl.location_dong = vd.addr3
+		where vl.location_gu = #{locationGu} and vl.location_dong <![CDATA[<>]]> ''
+	</select>
+	
+	<select id="selectTypeAddr2StatList" parameterType="MapStatDto" resultType="MapStatDto" >
+		SELECT
+			*, 
+			IFNULL(ROUND((resolutionCnt / crimeCnt) * 100, 1), 0) as resolutionPct,
+			IFNULL(ROUND((useCnt / crimeCnt) * 100, 1), 0) as usePct,
+			IFNULL(ROUND((murderResolutionCnt / murderCnt) * 100, 1), 0) as murderResolutionPct,
+			IFNULL(ROUND((murderUseCnt / murderCnt) * 100, 1), 0) as murderUsePct,
+			IFNULL(ROUND((robberResolutionCnt / robberCnt) * 100, 1), 0) as robberResolutionPct,
+			IFNULL(ROUND((robberUseCnt / robberCnt) * 100, 1), 0) as robberUsePct,
+			IFNULL(ROUND((rapeResolutionCnt / rapeCnt) * 100, 1), 0) as rapeResolutionPct,
+			IFNULL(ROUND((rapeUseCnt / rapeCnt) * 100, 1), 0) as rapeUsePct,
+			IFNULL(ROUND((theftResolutionCnt / theftCnt) * 100, 1), 0) as theftResolutionPct,
+			IFNULL(ROUND((theftUseCnt / theftCnt) * 100, 1), 0) as theftUsePct,
+			IFNULL(ROUND((violenceResolutionCnt / violenceCnt) * 100, 1), 0) as violenceResolutionPct,
+			IFNULL(ROUND((violenceUseCnt / violenceCnt) * 100, 1), 0) as violenceUsePct,
+			IFNULL(ROUND((accidentResolutionCnt / accidentCnt) * 100, 1), 0) as accidentResolutionPct,
+			IFNULL(ROUND((accidentUseCnt / accidentCnt) * 100, 1), 0) as accidentUsePct,
+			IFNULL(ROUND((destroyResolutionCnt / destroyCnt) * 100, 1), 0) as destroyResolutionPct,
+			IFNULL(ROUND((destroyUseCnt / destroyCnt) * 100, 1), 0) as destroyUsePct,
+			IFNULL(ROUND((etcResolutionCnt / etcCnt) * 100, 1), 0) as etcResolutionPct,
+			IFNULL(ROUND((etcUseCnt / etcCnt) * 100, 1), 0) as etcUsePct
+		FROM (
+			SELECT 
+				IFNULL(a.addr2,#{locationGu}) AS locationGu,
+				IFNULL(SUM(IF(a.addr3 IS NOT NULL, 1, 0)),0) AS crimeCnt,
+				IFNULL(SUM(IF(c.item_result IN (0, 3, 4), 1, 0)),0) AS resolutionCnt,
+				IFNULL(SUM(IF(c.item_use = 0 AND c.item_result IN (0, 3, 4), 1, 0)),0) AS useCnt,
+				IFNULL(SUM(IF(b.code_key = '10001', 1, 0)),0) AS murderCnt,
+				IFNULL(SUM(IF(b.code_key = '10001', IF(c.item_result IN (0, 3, 4), 1, 0), 0)),0) AS murderResolutionCnt,
+				IFNULL(SUM(IF(b.code_key = '10001', IF(c.item_use = 0 AND c.item_result IN (0, 3, 4), 1, 0),0)),0) AS murderUseCnt,
+				IFNULL(SUM(IF(b.code_key = '10002', 1, 0)),0) AS robberCnt,
+				IFNULL(SUM(IF(b.code_key = '10002', IF(c.item_result IN (0, 3, 4), 1, 0), 0)),0) AS robberResolutionCnt,
+				IFNULL(SUM(IF(b.code_key = '10002', IF(c.item_use = 0 AND c.item_result IN (0, 3, 4), 1, 0),0)),0) AS robberUseCnt,
+				IFNULL(SUM(IF(b.code_key = '10003', 1, 0)),0) AS rapeCnt,
+				IFNULL(SUM(IF(b.code_key = '10003', IF(c.item_result IN (0, 3, 4), 1, 0), 0)),0) AS rapeResolutionCnt,
+				IFNULL(SUM(IF(b.code_key = '10003', IF(c.item_use = 0 AND c.item_result IN (0, 3, 4), 1, 0),0)),0) AS rapeUseCnt,
+				IFNULL(SUM(IF(b.code_key = '10004', 1, 0)),0) AS theftCnt,
+				IFNULL(SUM(IF(b.code_key = '10004', IF(c.item_result IN (0, 3, 4), 1, 0), 0)),0) AS theftResolutionCnt,
+				IFNULL(SUM(IF(b.code_key = '10004', IF(c.item_use = 0 AND c.item_result IN (0, 3, 4), 1, 0),0)),0) AS theftUseCnt,
+				IFNULL(SUM(IF(b.code_key = '10005', 1, 0)),0) AS violenceCnt,
+				IFNULL(SUM(IF(b.code_key = '10005', IF(c.item_result IN (0, 3, 4), 1, 0), 0)),0) AS violenceResolutionCnt,
+				IFNULL(SUM(IF(b.code_key = '10005', IF(c.item_use = 0 AND c.item_result IN (0, 3, 4), 1, 0),0)),0) AS violenceUseCnt,
+				IFNULL(SUM(IF(b.code_key = '10006', 1, 0)),0) AS accidentCnt,
+				IFNULL(SUM(IF(b.code_key = '10006', IF(c.item_result IN (0, 3, 4), 1, 0), 0)),0) AS accidentResolutionCnt,
+				IFNULL(SUM(IF(b.code_key = '10006', IF(c.item_use = 0 AND c.item_result IN (0, 3, 4), 1, 0),0)),0) AS accidentUseCnt,
+				IFNULL(SUM(IF(b.code_key = '10007', 1, 0)),0) AS destroyCnt,
+				IFNULL(SUM(IF(b.code_key = '10007', IF(c.item_result IN (0, 3, 4), 1, 0), 0)),0) AS destroyResolutionCnt,
+				IFNULL(SUM(IF(b.code_key = '10007', IF(c.item_use = 0 AND c.item_result IN (0, 3, 4), 1, 0),0)),0) AS destroyUseCnt,
+				IFNULL(SUM(IF(b.code_key = '99999', 1, 0)),0) AS etcCnt,
+				IFNULL(SUM(IF(b.code_key = '99999', IF(c.item_result IN (0, 3, 4), 1, 0), 0)),0) AS etcResolutionCnt,
+				IFNULL(SUM(IF(b.code_key = '99999', IF(c.item_use = 0 AND c.item_result IN (0, 3, 4), 1, 0),0)),0) AS etcUseCnt
+			FROM ves_item a
+			INNER JOIN ves_code b on a.req_reason_code = b.code_key and b.code_group = '101'
+			LEFT OUTER JOIN ves_item_result c on a.item_serial = c.item_serial
+			LEFT OUTER JOIN ves_locations d on a.addr3 = d.location_dong and d.location_gu = #{locationGu}
+			<where>
+				a.vei_status <![CDATA[<>]]> 3
+				<if test="searchStDate != null and searchStDate != '' ">
+					AND DATE_FORMAT(a.req_date, '%Y%m%d') BETWEEN #{searchStDate} AND #{searchEdDate}
+					AND HOUR(a.req_date) in 
+					(
+						select HOUR(a.req_date) FROM ves_item_result
+						<where>
+						<if test="timeSlot00 != null and timeSlot00 != ''">
+							or HOUR(a.req_date) between 00 and 24
+						</if>
+						<if test="timeSlot07 != null and timeSlot07 != ''">
+							or HOUR(a.req_date) between 07 and 18
+						</if>
+						<if test="timeSlot18 != null and timeSlot18 != ''">
+							or HOUR(a.req_date) between 18 and 22
+						</if>
+						<if test="timeSlot22 != null and timeSlot22 != ''">
+							or (HOUR(a.req_date) between 22 and 23 or HOUR(a.req_date) between 00 and 03)
+						</if>
+						<if test="timeSlot03 != null and timeSlot03 != ''">
+							or HOUR(a.req_date) between 03 and 07
+						</if>
+						</where>
+					)
+				</if>
+				
+			</where>
+		) typeStat
+	</select>
+	
+	<select id="selectTypeAddr3StatList" parameterType="MapStatDto" resultType="MapStatDto" >
+		SELECT 
+			location_gu AS locationGu,
+			location_dong AS locationDong,
+			center_latitude AS centerLatitude,
+			center_longitude AS centerLongitude,
+			SUM(IF(addr3 IS NOT NULL, 1, 0)) AS crimeCnt,
+			SUM(IF(code_key = '10001', 1, 0)) AS murderCnt,
+			SUM(IF(code_key = '10002', 1, 0)) AS robberCnt,
+			SUM(IF(code_key = '10003', 1, 0)) AS rapeCnt,
+			SUM(IF(code_key = '10004', 1, 0)) AS theftCnt,
+			SUM(IF(code_key = '10005', 1, 0)) AS violenceCnt,
+			SUM(IF(code_key = '10006', 1, 0)) AS accidentCnt,
+			SUM(IF(code_key = '10007', 1, 0)) AS destroyCnt,
+			SUM(IF(code_key = '99999', 1, 0)) AS etcCnt
+		FROM ves_locations a
+		LEFT OUTER JOIN ves_item b on a.location_dong = b.addr3 and vei_status <![CDATA[<>]]> '3'
+			<if test="searchStDate != null and searchStDate != '' ">
+				AND DATE_FORMAT(b.req_date, '%Y%m%d') BETWEEN #{searchStDate} AND #{searchEdDate}
+				AND HOUR(b.req_date) in 
+					(
+						select HOUR(b.req_date) FROM ves_item_result
+						<where>
+						<if test="timeSlot00 != null and timeSlot00 != ''">
+							or HOUR(b.req_date) between 00 and 24
+						</if>
+						<if test="timeSlot07 != null and timeSlot07 != ''">
+							or HOUR(b.req_date) between 07 and 18
+						</if>
+						<if test="timeSlot18 != null and timeSlot18 != ''">
+							or HOUR(b.req_date) between 18 and 22
+						</if>
+						<if test="timeSlot22 != null and timeSlot22 != ''">
+							or (HOUR(b.req_date) between 22 and 23 or HOUR(b.req_date) between 00 and 03)
+						</if>
+						<if test="timeSlot03 != null and timeSlot03 != ''">
+							or HOUR(b.req_date) between 03 and 07
+						</if>
+						</where>
+					)
+			</if>
+		LEFT OUTER JOIN ves_code c on b.req_reason_code = c.code_key and c.code_group = '101'
+		<where> 
+			a.location_gu = #{locationGu} AND a.location_dong <![CDATA[<>]]> ''
+		</where>
+		GROUP BY a.location_gu, a.location_dong
+		ORDER BY ordering
+	</select>
+	
+	<select id="selectTypeAddr3StatInfo" parameterType="MapStatDto" resultType="MapStatDto" >
+		SELECT
+			*, 
+			IFNULL(ROUND((resolutionCnt / crimeCnt) * 100, 1), 0) as resolutionPct,
+			IFNULL(ROUND((useCnt / crimeCnt) * 100, 1), 0) as usePct,
+			IFNULL(ROUND((murderResolutionCnt / murderCnt) * 100, 1), 0) as murderResolutionPct,
+			IFNULL(ROUND((murderUseCnt / murderCnt) * 100, 1), 0) as murderUsePct,
+			IFNULL(ROUND((robberResolutionCnt / robberCnt) * 100, 1), 0) as robberResolutionPct,
+			IFNULL(ROUND((robberUseCnt / robberCnt) * 100, 1), 0) as robberUsePct,
+			IFNULL(ROUND((rapeResolutionCnt / rapeCnt) * 100, 1), 0) as rapeResolutionPct,
+			IFNULL(ROUND((rapeUseCnt / rapeCnt) * 100, 1), 0) as rapeUsePct,
+			IFNULL(ROUND((theftResolutionCnt / theftCnt) * 100, 1), 0) as theftResolutionPct,
+			IFNULL(ROUND((theftUseCnt / theftCnt) * 100, 1), 0) as theftUsePct,
+			IFNULL(ROUND((violenceResolutionCnt / violenceCnt) * 100, 1), 0) as violenceResolutionPct,
+			IFNULL(ROUND((violenceUseCnt / violenceCnt) * 100, 1), 0) as violenceUsePct,
+			IFNULL(ROUND((accidentResolutionCnt / accidentCnt) * 100, 1), 0) as accidentResolutionPct,
+			IFNULL(ROUND((accidentUseCnt / accidentCnt) * 100, 1), 0) as accidentUsePct,
+			IFNULL(ROUND((destroyResolutionCnt / destroyCnt) * 100, 1), 0) as destroyResolutionPct,
+			IFNULL(ROUND((destroyUseCnt / destroyCnt) * 100, 1), 0) as destroyUsePct,
+			IFNULL(ROUND((etcResolutionCnt / etcCnt) * 100, 1), 0) as etcResolutionPct,
+			IFNULL(ROUND((etcUseCnt / etcCnt) * 100, 1), 0) as etcUsePct
+		FROM (
+			SELECT 
+				location_gu AS locationGu,
+				location_dong AS locationDong,
+				center_latitude AS centerLatitude,
+				center_longitude AS centerLongitude,
+				SUM(IF(addr3 IS NOT NULL, 1, 0)) AS crimeCnt,
+				SUM(IF(code_key = '10001', 1, 0)) AS murderCnt,
+				SUM(IF(code_key = '10002', 1, 0)) AS robberCnt,
+				SUM(IF(code_key = '10003', 1, 0)) AS rapeCnt,
+				SUM(IF(code_key = '10004', 1, 0)) AS theftCnt,
+				SUM(IF(code_key = '10005', 1, 0)) AS violenceCnt,
+				SUM(IF(code_key = '10006', 1, 0)) AS accidentCnt,
+				SUM(IF(code_key = '10007', 1, 0)) AS destroyCnt,
+				SUM(IF(code_key = '99999', 1, 0)) AS etcCnt,
+				SUM(IF(d.item_result IN (0, 3, 4), 1, 0)) AS resolutionCnt,
+				SUM(IF(d.item_use = 0 AND d.item_result IN (0, 3, 4), 1, 0)) AS useCnt,
+				SUM(IF(c.code_key = '10001', IF(d.item_result IN (0, 3, 4), 1, 0), 0)) AS murderResolutionCnt,
+				SUM(IF(c.code_key = '10001', IF(d.item_use = 0 AND d.item_result IN (0, 3, 4), 1, 0),0)) AS murderUseCnt,
+				SUM(IF(c.code_key = '10002', IF(d.item_result IN (0, 3, 4), 1, 0), 0)) AS robberResolutionCnt,
+				SUM(IF(c.code_key = '10002', IF(d.item_use = 0 AND d.item_result IN (0, 3, 4), 1, 0),0)) AS robberUseCnt,
+				SUM(IF(c.code_key = '10003', IF(d.item_result IN (0, 3, 4), 1, 0), 0)) AS rapeResolutionCnt,
+				SUM(IF(c.code_key = '10003', IF(d.item_use = 0 AND d.item_result IN (0, 3, 4), 1, 0),0)) AS rapeUseCnt,
+				SUM(IF(c.code_key = '10004', IF(d.item_result IN (0, 3, 4), 1, 0), 0)) AS theftResolutionCnt,
+				SUM(IF(c.code_key = '10004', IF(d.item_use = 0 AND d.item_result IN (0, 3, 4), 1, 0),0)) AS theftUseCnt,
+				SUM(IF(c.code_key = '10005', IF(d.item_result IN (0, 3, 4), 1, 0), 0)) AS violenceResolutionCnt,
+				SUM(IF(c.code_key = '10005', IF(d.item_use = 0 AND d.item_result IN (0, 3, 4), 1, 0),0)) AS violenceUseCnt,
+				SUM(IF(c.code_key = '10006', IF(d.item_result IN (0, 3, 4), 1, 0), 0)) AS accidentResolutionCnt,
+				SUM(IF(c.code_key = '10006', IF(d.item_use = 0 AND d.item_result IN (0, 3, 4), 1, 0),0)) AS accidentUseCnt,
+				SUM(IF(c.code_key = '10007', IF(d.item_result IN (0, 3, 4), 1, 0), 0)) AS destroyResolutionCnt,
+				SUM(IF(c.code_key = '10007', IF(d.item_use = 0 AND d.item_result IN (0, 3, 4), 1, 0),0)) AS destroyUseCnt,
+				SUM(IF(c.code_key = '99999', IF(d.item_result IN (0, 3, 4), 1, 0), 0)) AS etcResolutionCnt,
+				SUM(IF(c.code_key = '99999', IF(d.item_use = 0 AND d.item_result IN (0, 3, 4), 1, 0),0)) AS etcUseCnt
+			FROM ves_locations a
+			LEFT OUTER JOIN ves_item b on a.location_dong = b.addr3 and vei_status <![CDATA[<>]]> '3'
+			LEFT OUTER JOIN ves_code c on b.req_reason_code = c.code_key and c.code_group = '101'
+			LEFT OUTER JOIN ves_item_result d ON b.item_serial = d.item_serial
+			<where> 
+				a.location_gu = #{locationGu} AND a.location_dong <![CDATA[<>]]> ''
+				<if test="locationDong != null and locationDong != '' ">
+					AND a.location_dong = #{locationDong}
+				</if>
+				<if test="searchStDate != null and searchStDate != '' ">
+					AND DATE_FORMAT(b.req_date, '%Y%m%d') BETWEEN #{searchStDate} AND #{searchEdDate}
+					AND HOUR(b.req_date) in 
+					(
+						select HOUR(b.req_date) FROM ves_item_result
+						<where>
+						<if test="timeSlot00 != null and timeSlot00 != ''">
+							or HOUR(b.req_date) between 00 and 24
+						</if>
+						<if test="timeSlot07 != null and timeSlot07 != ''">
+							or HOUR(b.req_date) between 07 and 18
+						</if>
+						<if test="timeSlot18 != null and timeSlot18 != ''">
+							or HOUR(b.req_date) between 18 and 22
+						</if>
+						<if test="timeSlot22 != null and timeSlot22 != ''">
+							or (HOUR(b.req_date) between 22 and 23 or HOUR(b.req_date) between 00 and 03)
+						</if>
+						<if test="timeSlot03 != null and timeSlot03 != ''">
+							or HOUR(b.req_date) between 03 and 07
+						</if>
+						</where>
+					)
+				</if>
+			</where>
+			GROUP BY a.location_gu, a.location_dong
+			ORDER BY ordering
+		) typeStat
+	</select>
+	
+	<select id="selectCctvInstStatList" parameterType="MapStatDto" resultType="MapStatDto" >
+		SELECT 
+			a.location_gu as locationGu, 
+			a.location_dong as locationDong,
+			a.center_latitude as centerLatitude,
+			a.center_longitude as centerLongitude,
+			SUM(IF(b.addr3 IS NOT NULL, 1, 0)) as cctvCnt,
+			SUM(IF(b.item_type = '0', 1, 0)) as cctvType0,
+			SUM(IF(b.item_type = '1', 1, 0)) as cctvType1,
+			SUM(IF(b.item_type = '2', 1, 0)) as cctvType2,
+			SUM(IF(b.item_type = '3', 1, 0)) as cctvType3,
+			SUM(IF(b.item_type = '4', 1, 0)) as cctvType4,
+			SUM(IF(b.item_type = '5', 1, 0)) as cctvType5,
+			SUM(IF(b.item_type = '6', 1, 0)) as cctvType6,
+			SUM(IF(b.item_type = '7', 1, 0)) as cctvType7,
+			SUM(IF(b.item_type = '8', 1, 0)) as cctvType8,
+			SUM(IF(b.item_type = '9', 1, 0)) as cctvType9,
+			SUM(IF(b.item_type = '10', 1, 0)) as cctvType10
+		FROM ves_locations a
+		LEFT OUTER JOIN ves_item_latnlng b on a.location_dong = b.addr3
+		LEFT OUTER JOIN ves_code c on c.code_key = b.item_type and c.code_group = '115'
+		WHERE a.location_gu = #{locationGu} and a.location_dong <![CDATA[<>]]> ''
+		GROUP BY a.location_gu, a.location_dong
+		ORDER BY a.ordering
+	</select>
+	
+	
+	<select id="selectCctvInstAddr2StatInfo" parameterType="MapStatDto" resultType="MapStatDto" >
+		SELECT
+			*,
+			IFNULL(ROUND((resolutionCnt / cctvCnt) * 100, 1), 0) as resolutionPct,
+			IFNULL(ROUND((useCnt / cctvCnt) * 100, 1), 0) as usePct,
+			IFNULL(ROUND((preventionResolutionCnt / preventionCnt) * 100, 1), 0) as preventionResolutionPct,
+			IFNULL(ROUND((preventionUseCnt / preventionCnt) * 100, 1), 0) as preventionUsePct,
+			IFNULL(ROUND((parkingResolutionCnt / parkingCnt) * 100, 1), 0) as parkingResolutionPct,
+			IFNULL(ROUND((parkingUseCnt / parkingCnt) * 100, 1), 0) as parkingUsePct,
+			IFNULL(ROUND((trackResolutionCnt / trackCnt) * 100, 1), 0) as trackResolutionPct,
+			IFNULL(ROUND((trackUseCnt / trackCnt) * 100, 1), 0) as trackUsePct,
+			IFNULL(ROUND((garbageResolutionCnt / garbageCnt) * 100, 1), 0) as garbageResolutionPct,
+			IFNULL(ROUND((garbageUseCnt / garbageCnt) * 100, 1), 0) as garbageUsePct,
+			IFNULL(ROUND((multiResolutionCnt / multiCnt) * 100, 1), 0) as multiResolutionPct,
+			IFNULL(ROUND((multiUseCnt / multiCnt) * 100, 1), 0) as multiUsePct,
+			IFNULL(ROUND((fireResolutionCnt / fireCnt) * 100, 1), 0) as fireResolutionPct,
+			IFNULL(ROUND((fireUseCnt / fireCnt) * 100, 1), 0) as fireUsePct,
+			IFNULL(ROUND((mFireResolutionCnt / mFireCnt) * 100, 1), 0) as mFireResolutionPct,
+			IFNULL(ROUND((mFireUseCnt / mFireCnt) * 100, 1), 0) as mFireUsePct,
+			IFNULL(ROUND((streetResolutionCnt / streetCnt) * 100, 1), 0) as streetResolutionPct,
+			IFNULL(ROUND((streetUseCnt / streetCnt) * 100, 1), 0) as streetUsePct,
+			IFNULL(ROUND((parkResolutionCnt / parkCnt) * 100, 1), 0) as parkResolutionPct,
+			IFNULL(ROUND((parkUseCnt / parkCnt) * 100, 1), 0) as parkUsePct,
+			IFNULL(ROUND((childResolutionCnt / childCnt) * 100, 1), 0) as childResolutionPct,
+			IFNULL(ROUND((childUseCnt / childCnt) * 100, 1), 0) as childUsePct,
+			IFNULL(ROUND((etcResolutionCnt / etcCnt) * 100, 1), 0) as etcResolutionPct,
+			IFNULL(ROUND((etcUseCnt / etcCnt) * 100, 1), 0) as etcUsePct
+			FROM (
+					select 
+						IFNULL(d.addr2, #{locationGu}) AS locationGu,
+						(select count(*) from ves_item_latnlng where addr2 =  #{locationGu} and managecode != '' and code1 != '') as cctvCnt,
+						IFNULL(SUM(IF(d.item_result IN (0, 3, 4), 1, 0)),0) AS resolutionCnt,
+						IFNULL(SUM(IF(d.item_use = 0 AND d.item_result IN (0, 3, 4), 1, 0)),0) AS useCnt,
+						(select count(*) from ves_item_latnlng where addr2 = #{locationGu} and managecode != '' and code1 != '' and item_type = 0) as preventionCnt,
+						IFNULL(SUM(IF(e.code_key = '0', IF(d.item_result IN (0, 3, 4), 1, 0), 0)),0) AS preventionResolutionCnt,
+						IFNULL(SUM(IF(e.code_key = '0', IF(d.item_use = 0 AND d.item_result IN (0, 3, 4), 1, 0),0)),0) AS preventionUseCnt,
+						(select count(*) from ves_item_latnlng where addr2 = #{locationGu} and managecode != '' and code1 != '' and item_type = 1) as parkingCnt,
+						IFNULL(SUM(IF(e.code_key = '1', IF(d.item_result IN (0, 3, 4), 1, 0), 0)),0) AS parkingResolutionCnt,
+						IFNULL(SUM(IF(e.code_key = '1', IF(d.item_use = 0 AND d.item_result IN (0, 3, 4), 1, 0),0)),0) AS parkingUseCnt,
+						(select count(*) from ves_item_latnlng where addr2 = #{locationGu} and managecode != '' and code1 != '' and item_type = 2) as trackCnt,
+						IFNULL(SUM(IF(e.code_key = '2', IF(d.item_result IN (0, 3, 4), 1, 0), 0)),0) AS trackResolutionCnt,
+						IFNULL(SUM(IF(e.code_key = '2', IF(d.item_use = 0 AND d.item_result IN (0, 3, 4), 1, 0),0)),0) AS trackUseCnt,
+						(select count(*) from ves_item_latnlng where addr2 = #{locationGu} and managecode != '' and code1 != '' and item_type = 3) as garbageCnt,
+						IFNULL(SUM(IF(e.code_key = '3', IF(d.item_result IN (0, 3, 4), 1, 0), 0)),0) AS garbageResolutionCnt,
+						IFNULL(SUM(IF(e.code_key = '3', IF(d.item_use = 0 AND d.item_result IN (0, 3, 4), 1, 0),0)),0) AS garbageUseCnt,
+						(select count(*) from ves_item_latnlng where addr2 = #{locationGu} and managecode != '' and code1 != '' and item_type = 4) as multiCnt,
+						IFNULL(SUM(IF(e.code_key = '4', IF(d.item_result IN (0, 3, 4), 1, 0), 0)),0) AS multiResolutionCnt,
+						IFNULL(SUM(IF(e.code_key = '4', IF(d.item_use = 0 AND d.item_result IN (0, 3, 4), 1, 0),0)),0) AS multiUseCnt,
+						(select count(*) from ves_item_latnlng where addr2 = #{locationGu} and managecode != '' and code1 != '' and item_type = 5) as fireCnt,
+						IFNULL(SUM(IF(e.code_key = '5', IF(d.item_result IN (0, 3, 4), 1, 0), 0)),0) AS fireResolutionCnt,
+						IFNULL(SUM(IF(e.code_key = '5', IF(d.item_use = 0 AND d.item_result IN (0, 3, 4), 1, 0),0)),0) AS fireUseCnt,
+						(select count(*) from ves_item_latnlng where addr2 = #{locationGu} and managecode != '' and code1 != '' and item_type = 6) as mFireCnt,
+						IFNULL(SUM(IF(e.code_key = '6', IF(d.item_result IN (0, 3, 4), 1, 0), 0)),0) AS mFireResolutionCnt,
+						IFNULL(SUM(IF(e.code_key = '6', IF(d.item_use = 0 AND d.item_result IN (0, 3, 4), 1, 0),0)),0) AS mFireUseCnt,
+						(select count(*) from ves_item_latnlng where addr2 = #{locationGu} and managecode != '' and code1 != '' and item_type = 7) as streetCnt, 
+						IFNULL(SUM(IF(e.code_key = '7', IF(d.item_result IN (0, 3, 4), 1, 0), 0)),0) AS streetResolutionCnt,
+						IFNULL(SUM(IF(e.code_key = '7', IF(d.item_use = 0 AND d.item_result IN (0, 3, 4), 1, 0),0)),0) AS streetUseCnt,
+						(select count(*) from ves_item_latnlng where addr2 = #{locationGu} and managecode != '' and code1 != '' and item_type = 8) as parkCnt, 
+						IFNULL(SUM(IF(e.code_key = '8', IF(d.item_result IN (0, 3, 4), 1, 0), 0)),0) AS parkResolutionCnt,
+						IFNULL(SUM(IF(e.code_key = '8', IF(d.item_use = 0 AND d.item_result IN (0, 3, 4), 1, 0),0)),0) AS parkUseCnt,
+						(select count(*) from ves_item_latnlng where addr2 = #{locationGu} and managecode != '' and code1 != '' and item_type = 9) as childCnt, 
+						IFNULL(SUM(IF(e.code_key = '9', IF(d.item_result IN (0, 3, 4), 1, 0), 0)),0) AS childResolutionCnt,
+						IFNULL(SUM(IF(e.code_key = '9', IF(d.item_use = 0 AND d.item_result IN (0, 3, 4), 1, 0),0)),0) AS childUseCnt,		
+						(select count(*) from ves_item_latnlng where addr2 = #{locationGu} and managecode != '' and code1 != '' and item_type = 10) as etcCnt,
+						IFNULL(SUM(IF(e.code_key = '10', IF(d.item_result IN (0, 3, 4), 1, 0), 0)),0) AS etcResolutionCnt,
+						IFNULL(SUM(IF(e.code_key = '10', IF(d.item_use = 0 AND d.item_result IN (0, 3, 4), 1, 0),0)),0) AS etcUseCnt
+					from 
+					(
+						SELECT a.*, b.*, c.vei_status, c.req_date
+						FROM ves_item_latnlng a
+						LEFT JOIN ves_item_result b ON INSTR(b.used_video_id, a.code1)
+						LEFT JOIN ves_item c ON b.item_serial = c.item_serial
+						WHERE a.addr2 = #{locationGu}
+						GROUP BY a.managecode, a.code1
+					) d
+					INNER JOIN ves_code e ON d.item_type = e.code_key AND e.code_group = '115'
+					<where>
+						d.vei_status <![CDATA[<>]]> 3
+						<if test="searchStDate != null and searchStDate != '' ">
+							AND DATE_FORMAT(d.req_date, '%Y%m%d') BETWEEN #{searchStDate} AND #{searchEdDate}
+							AND HOUR(d.req_date) in 
+							(
+								select HOUR(d.req_date) FROM ves_item_result
+								<where>
+									<if test="timeSlot00 != null and timeSlot00 != ''">
+										or HOUR(d.req_date) between 00 and 24
+									</if>
+									<if test="timeSlot07 != null and timeSlot07 != ''">
+										or HOUR(d.req_date) between 07 and 18
+									</if>
+									<if test="timeSlot18 != null and timeSlot18 != ''">
+										or HOUR(d.req_date) between 18 and 22
+									</if>
+									<if test="timeSlot22 != null and timeSlot22 != ''">
+										or (HOUR(d.req_date) between 22 and 23 or HOUR(d.req_date) between 00 and 03)
+									</if>
+									<if test="timeSlot03 != null and timeSlot03 != ''">
+										or HOUR(d.req_date) between 03 and 07
+									</if>
+								</where>
+							)
+						</if>
+					</where>
+			) typeStat
+	</select>
+	
+	<select id="selectCctvInstAddr3StatList" parameterType="MapStatDto" resultType="MapStatDto" >
+		SELECT 
+			a.location_gu as locationGu, 
+			a.location_dong as locationDong,
+			a.center_latitude as centerLatitude,
+			a.center_longitude as centerLongitude,
+			SUM(IF(b.addr3 IS NOT NULL, 1, 0)) as cctvCnt,
+			SUM(IF(b.item_type = '0', 1, 0)) as cctvType0,
+			SUM(IF(b.item_type = '1', 1, 0)) as cctvType1,
+			SUM(IF(b.item_type = '2', 1, 0)) as cctvType2,
+			SUM(IF(b.item_type = '3', 1, 0)) as cctvType3,
+			SUM(IF(b.item_type = '4', 1, 0)) as cctvType4,
+			SUM(IF(b.item_type = '5', 1, 0)) as cctvType5,
+			SUM(IF(b.item_type = '6', 1, 0)) as cctvType6,
+			SUM(IF(b.item_type = '7', 1, 0)) as cctvType7,
+			SUM(IF(b.item_type = '8', 1, 0)) as cctvType8,
+			SUM(IF(b.item_type = '9', 1, 0)) as cctvType9,
+			SUM(IF(b.item_type = '10', 1, 0)) as cctvType10
+		FROM ves_locations a
+		LEFT OUTER JOIN ves_item_latnlng b on a.location_dong = b.addr3
+		LEFT OUTER JOIN ves_code c on c.code_key = b.item_type and c.code_group = '115'
+		WHERE a.location_gu = #{locationGu} and a.location_dong <![CDATA[<>]]> ''
+		GROUP BY a.location_gu, a.location_dong
+		ORDER BY a.ordering
+	</select>
+	
+	<select id="selectCctvInstAddr3StatInfo" parameterType="MapStatDto" resultType="MapStatDto" >
+		SELECT
+			*,
+			IFNULL(ROUND((resolutionCnt / cctvCnt) * 100, 1), 0) as resolutionPct,
+			IFNULL(ROUND((useCnt / cctvCnt) * 100, 1), 0) as usePct,
+			IFNULL(ROUND((preventionResolutionCnt / preventionCnt) * 100, 1), 0) as preventionResolutionPct,
+			IFNULL(ROUND((preventionUseCnt / preventionCnt) * 100, 1), 0) as preventionUsePct,
+			IFNULL(ROUND((parkingResolutionCnt / parkingCnt) * 100, 1), 0) as parkingResolutionPct,
+			IFNULL(ROUND((parkingUseCnt / parkingCnt) * 100, 1), 0) as parkingUsePct,
+			IFNULL(ROUND((trackResolutionCnt / trackCnt) * 100, 1), 0) as trackResolutionPct,
+			IFNULL(ROUND((trackUseCnt / trackCnt) * 100, 1), 0) as trackUsePct,
+			IFNULL(ROUND((garbageResolutionCnt / garbageCnt) * 100, 1), 0) as garbageResolutionPct,
+			IFNULL(ROUND((garbageUseCnt / garbageCnt) * 100, 1), 0) as garbageUsePct,
+			IFNULL(ROUND((multiResolutionCnt / multiCnt) * 100, 1), 0) as multiResolutionPct,
+			IFNULL(ROUND((multiUseCnt / multiCnt) * 100, 1), 0) as multiUsePct,
+			IFNULL(ROUND((fireResolutionCnt / fireCnt) * 100, 1), 0) as fireResolutionPct,
+			IFNULL(ROUND((fireUseCnt / fireCnt) * 100, 1), 0) as fireUsePct,
+			IFNULL(ROUND((mFireResolutionCnt / mFireCnt) * 100, 1), 0) as mFireResolutionPct,
+			IFNULL(ROUND((mFireUseCnt / mFireCnt) * 100, 1), 0) as mFireUsePct,
+			IFNULL(ROUND((streetResolutionCnt / streetCnt) * 100, 1), 0) as streetResolutionPct,
+			IFNULL(ROUND((streetUseCnt / streetCnt) * 100, 1), 0) as streetUsePct,
+			IFNULL(ROUND((parkResolutionCnt / parkCnt) * 100, 1), 0) as parkResolutionPct,
+			IFNULL(ROUND((parkUseCnt / parkCnt) * 100, 1), 0) as parkUsePct,
+			IFNULL(ROUND((childResolutionCnt / childCnt) * 100, 1), 0) as childResolutionPct,
+			IFNULL(ROUND((childUseCnt / childCnt) * 100, 1), 0) as childUsePct,
+			IFNULL(ROUND((etcResolutionCnt / etcCnt) * 100, 1), 0) as etcResolutionPct,
+			IFNULL(ROUND((etcUseCnt / etcCnt) * 100, 1), 0) as etcUsePct
+			FROM (
+					select 
+						IFNULL(d.addr2, #{locationGu}) AS locationGu,
+						IFNULL(#{locationDong}, null) AS locationDong,
+						(select count(*) from ves_item_latnlng where addr2 =  #{locationGu} and managecode != '' and code1 != '') as cctvCnt,
+						IFNULL(SUM(IF(d.item_result IN (0, 3, 4), 1, 0)),0) AS resolutionCnt,
+						IFNULL(SUM(IF(d.item_use = 0 AND d.item_result IN (0, 3, 4), 1, 0)),0) AS useCnt,
+						(select count(*) from ves_item_latnlng where addr2 = #{locationGu} and managecode != '' and code1 != '' and item_type = 0) as preventionCnt,
+						IFNULL(SUM(IF(e.code_key = '0', IF(d.item_result IN (0, 3, 4), 1, 0), 0)),0) AS preventionResolutionCnt,
+						IFNULL(SUM(IF(e.code_key = '0', IF(d.item_use = 0 AND d.item_result IN (0, 3, 4), 1, 0),0)),0) AS preventionUseCnt,
+						(select count(*) from ves_item_latnlng where addr2 = #{locationGu} and managecode != '' and code1 != '' and item_type = 1) as parkingCnt,
+						IFNULL(SUM(IF(e.code_key = '1', IF(d.item_result IN (0, 3, 4), 1, 0), 0)),0) AS parkingResolutionCnt,
+						IFNULL(SUM(IF(e.code_key = '1', IF(d.item_use = 0 AND d.item_result IN (0, 3, 4), 1, 0),0)),0) AS parkingUseCnt,
+						(select count(*) from ves_item_latnlng where addr2 = #{locationGu} and managecode != '' and code1 != '' and item_type = 2) as trackCnt,
+						IFNULL(SUM(IF(e.code_key = '2', IF(d.item_result IN (0, 3, 4), 1, 0), 0)),0) AS trackResolutionCnt,
+						IFNULL(SUM(IF(e.code_key = '2', IF(d.item_use = 0 AND d.item_result IN (0, 3, 4), 1, 0),0)),0) AS trackUseCnt,
+						(select count(*) from ves_item_latnlng where addr2 = #{locationGu} and managecode != '' and code1 != '' and item_type = 3) as garbageCnt,
+						IFNULL(SUM(IF(e.code_key = '3', IF(d.item_result IN (0, 3, 4), 1, 0), 0)),0) AS garbageResolutionCnt,
+						IFNULL(SUM(IF(e.code_key = '3', IF(d.item_use = 0 AND d.item_result IN (0, 3, 4), 1, 0),0)),0) AS garbageUseCnt,
+						(select count(*) from ves_item_latnlng where addr2 = #{locationGu} and managecode != '' and code1 != '' and item_type = 4) as multiCnt,
+						IFNULL(SUM(IF(e.code_key = '4', IF(d.item_result IN (0, 3, 4), 1, 0), 0)),0) AS multiResolutionCnt,
+						IFNULL(SUM(IF(e.code_key = '4', IF(d.item_use = 0 AND d.item_result IN (0, 3, 4), 1, 0),0)),0) AS multiUseCnt,
+						(select count(*) from ves_item_latnlng where addr2 = #{locationGu} and managecode != '' and code1 != '' and item_type = 5) as fireCnt,
+						IFNULL(SUM(IF(e.code_key = '5', IF(d.item_result IN (0, 3, 4), 1, 0), 0)),0) AS fireResolutionCnt,
+						IFNULL(SUM(IF(e.code_key = '5', IF(d.item_use = 0 AND d.item_result IN (0, 3, 4), 1, 0),0)),0) AS fireUseCnt,
+						(select count(*) from ves_item_latnlng where addr2 = #{locationGu} and managecode != '' and code1 != '' and item_type = 6) as mFireCnt,
+						IFNULL(SUM(IF(e.code_key = '6', IF(d.item_result IN (0, 3, 4), 1, 0), 0)),0) AS mFireResolutionCnt,
+						IFNULL(SUM(IF(e.code_key = '6', IF(d.item_use = 0 AND d.item_result IN (0, 3, 4), 1, 0),0)),0) AS mFireUseCnt,
+						(select count(*) from ves_item_latnlng where addr2 = #{locationGu} and managecode != '' and code1 != '' and item_type = 7) as streetCnt, 
+						IFNULL(SUM(IF(e.code_key = '7', IF(d.item_result IN (0, 3, 4), 1, 0), 0)),0) AS streetResolutionCnt,
+						IFNULL(SUM(IF(e.code_key = '7', IF(d.item_use = 0 AND d.item_result IN (0, 3, 4), 1, 0),0)),0) AS streetUseCnt,
+						(select count(*) from ves_item_latnlng where addr2 = #{locationGu} and managecode != '' and code1 != '' and item_type = 8) as parkCnt, 
+						IFNULL(SUM(IF(e.code_key = '8', IF(d.item_result IN (0, 3, 4), 1, 0), 0)),0) AS parkResolutionCnt,
+						IFNULL(SUM(IF(e.code_key = '8', IF(d.item_use = 0 AND d.item_result IN (0, 3, 4), 1, 0),0)),0) AS parkUseCnt,
+						(select count(*) from ves_item_latnlng where addr2 = #{locationGu} and managecode != '' and code1 != '' and item_type = 9) as childCnt, 
+						IFNULL(SUM(IF(e.code_key = '9', IF(d.item_result IN (0, 3, 4), 1, 0), 0)),0) AS childResolutionCnt,
+						IFNULL(SUM(IF(e.code_key = '9', IF(d.item_use = 0 AND d.item_result IN (0, 3, 4), 1, 0),0)),0) AS childUseCnt,		
+						(select count(*) from ves_item_latnlng where addr2 = #{locationGu} and managecode != '' and code1 != '' and item_type = 10) as etcCnt,
+						IFNULL(SUM(IF(e.code_key = '10', IF(d.item_result IN (0, 3, 4), 1, 0), 0)),0) AS etcResolutionCnt,
+						IFNULL(SUM(IF(e.code_key = '10', IF(d.item_use = 0 AND d.item_result IN (0, 3, 4), 1, 0),0)),0) AS etcUseCnt
+					from 
+					(
+						SELECT a.*, b.*, c.vei_status, c.req_date
+						FROM ves_item_latnlng a
+						LEFT JOIN ves_item_result b ON INSTR(b.used_video_id, a.code1)
+						LEFT JOIN ves_item c ON b.item_serial = c.item_serial
+						WHERE a.addr2 = #{locationGu}
+						AND a.addr3 = #{locationDong}
+						GROUP BY a.managecode, a.code1
+					) d
+					INNER JOIN ves_code e ON d.item_type = e.code_key AND e.code_group = '115'
+					<where>
+						d.vei_status <![CDATA[<>]]> 3
+						<if test="searchStDate != null and searchStDate != '' ">
+							AND DATE_FORMAT(d.req_date, '%Y%m%d') BETWEEN #{searchStDate} AND #{searchEdDate}
+							AND HOUR(d.req_date) in 
+							(
+								select HOUR(d.req_date) FROM ves_item_result
+								<where>
+									<if test="timeSlot00 != null and timeSlot00 != ''">
+										or HOUR(d.req_date) between 00 and 24
+									</if>
+									<if test="timeSlot07 != null and timeSlot07 != ''">
+										or HOUR(d.req_date) between 07 and 18
+									</if>
+									<if test="timeSlot18 != null and timeSlot18 != ''">
+										or HOUR(d.req_date) between 18 and 22
+									</if>
+									<if test="timeSlot22 != null and timeSlot22 != ''">
+										or (HOUR(d.req_date) between 22 and 23 or HOUR(d.req_date) between 00 and 03)
+									</if>
+									<if test="timeSlot03 != null and timeSlot03 != ''">
+										or HOUR(d.req_date) between 03 and 07
+									</if>
+								</where>
+							)
+						</if>
+					</where>
+			) typeStat
+	</select>
+	
+	<select id="selectCctvMarkerTypeList" parameterType="MapStatDto" resultType="MapStatDto" >
+		SELECT 
+			count(*) AS cctvCount,
+			a.item_type AS cctvTypeCode,
+			b.code_desc AS cctvTypeNm,
+			b.code_val AS cctvImg
+		FROM ves_item_latnlng a
+		LEFT OUTER JOIN ves_code b on b.code_key = a.item_type and b.code_group = '115'
+		GROUP BY a.item_type
+		ORDER BY a.item_type DESC
+	</select>
+	
+	<select id="selectNotUseCctvList" parameterType="MapStatDto" resultType="MapStatDto" >
+		SELECT 
+			@ROWNUM := @ROWNUM + 1 AS rank, 
+			c.*
+		FROM(
+			SELECT a.code1, a.address, count(b.used_video_id) as notUseCnt
+			FROM ves_item_latnlng a
+			LEFT OUTER JOIN ves_item_result b on instr(b.used_video_id, a.code1),
+			(SELECT @ROWNUM := 0) R
+			WHERE a.addr2 = #{locationGu}
+			AND b.item_use = 1
+			AND a.direction IS NULL
+			GROUP BY a.code1
+			ORDER BY notUseCnt desc
+		) c
+	</select>
+	
+</mapper>

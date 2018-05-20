@@ -1,0 +1,332 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.happyJ.realestate.dao.UserDao">
+	
+	<select id="selectUserInfo" parameterType="UserDto" resultType="UserDto">
+		SELECT 
+			userid as userId,
+			password as password,
+			level as level,
+			expired as expired,
+			position as position,
+			depart as depart,
+			team as team,
+			username as userName,
+			phonenum as phoneNum,
+			permit as permit,
+			reject_reason as rejectReason,
+			uselimitdate as useLimitDate,
+			passwordlimitdate as passwordLimitDate,
+			smsreceive as smsReceive,
+			depart_modifying_yn as departModifyingYn,
+			quitting_yn as quittingYn,
+			chg_depart as chgDepart
+		FROM ves_user
+		<where>
+			permit = 1 AND expired = 'N'
+			AND userid = #{userId}
+		</where> 
+	</select>
+	
+	<select id="selectAllUserInfo" parameterType="UserDto" resultType="UserDto">
+		SELECT 
+			userid as userId,
+			password as password,
+			level as level,
+			expired as expired,
+			position as position,
+			depart as depart,
+			team as team,
+			username as userName,
+			phonenum as phoneNum,
+			permit as permit,
+			reject_reason as rejectReason,
+			uselimitdate as useLimitDate,
+			passwordlimitdate as passwordLimitDate,
+			smsreceive as smsReceive,
+			depart_modifying_yn as departModifyingYn,
+			quitting_yn as quittingYn,
+			chg_depart as chgDepart
+		FROM ves_user
+		<where>
+			userid = #{userId}
+		</where> 
+	</select>
+	
+	<select id="selectUserInfoForAPI" parameterType="UserDto" resultType="LoginBody">
+		SELECT 
+			userid as userId,
+			password as password,
+			level as level,
+			expired as expired,
+			position as position,
+			depart as depart,
+			team as team,
+			username as userName,
+			phonenum as phoneNum,
+			permit as permit,
+			reject_reason as rejectReason,
+			uselimitdate as useLimitDate,
+			passwordlimitdate as passwordLimitDate,
+			smsreceive as smsReceive,
+			depart_modifying_yn as departModifyingYn,
+			quitting_yn as quittingYn,
+			chg_depart as chgDepart
+		FROM ves_user
+		<where>
+			permit = 1 AND expired = 'N'
+			<if test="userId != null and userId != ''">
+			AND userid = #{userId}
+			</if>
+			<if test="password != null and password != ''">
+			AND password = password(#{password})
+			</if>
+			<if test="smsReceive != null and smsReceive != ''">
+			AND smsreceive = #{smsReceive}
+			</if>
+			<if test="level != null and level != ''">
+			AND level <![CDATA[>=]]> #{level}
+			</if>
+		</where> 
+	</select>
+	
+	<update id="updateUserInfo" parameterType="UserDto">
+		UPDATE ves_user
+		<set>
+			<choose>
+				<when test="chgPasswordFlag != null and chgPasswordFlag != ''">
+					<if test="password != null and password != '' ">password = #{password},</if>
+				</when>
+				<otherwise>
+					<if test="password != null and password != '' ">password = password(#{password}),</if>
+				</otherwise>
+			</choose>
+			
+			<if test="level != null and level != '' ">level = #{level},</if>
+			<if test="expired != null and expired != '' ">expired = #{expired},</if>
+			<if test="position != null and position != '' ">position = #{position},</if>
+			<if test="depart != null and depart != '' ">depart = #{depart},</if>
+			<if test="team != null and team != '' ">team = #{team},</if>
+			<if test="userName != null and userName != '' ">username = #{userName},</if>
+			<if test="phoneNum != null and phoneNum != '' ">phonenum = #{phoneNum},</if>
+			<if test="permit != null and permit != '' ">permit = #{permit},</if>
+			<if test="rejectReason != null and rejectReason != '' ">reject_reason = #{rejectReason},</if>
+			<if test="useLimitDate != null and useLimitDate != '' ">uselimitdate = #{useLimitDate},</if>
+			<if test="password != null and password != '' ">passwordlimitdate = DATE_ADD(CURDATE(), INTERVAL 180 DAY),</if>
+			<if test="smsReceive != null and smsReceive != '' ">smsreceive = #{smsReceive},</if>
+			<if test="departModifyingYn != null and departModifyingYn != '' ">depart_modifying_yn = #{departModifyingYn},</if>
+			<if test="quittingYn != null and quittingYn != '' ">quitting_yn = #{quittingYn},</if>
+			<if test="chgDepart != null and chgDepart != '' ">chg_depart = #{chgDepart}</if>
+		</set>
+		<where>
+			userid = #{userId}
+		</where>
+	</update>	
+	
+	<insert id="insertUserInfo" parameterType="UserDto">
+		INSERT INTO ves_user(
+			userid
+			,password
+			,level
+			,expired
+			,position
+			,depart
+			,team
+			,username
+			,phonenum
+			,permit
+			,reject_reason
+			,uselimitdate
+			,passwordlimitdate
+			,smsreceive
+			,depart_modifying_yn
+			,quitting_yn
+			,chg_depart								
+		) VALUES (
+			#{userId}
+			,password(#{password})
+			,#{level}
+			,'N'
+			,#{position}
+			,#{depart}
+			,#{team}
+			,#{userName}
+			,#{phoneNum}
+			,0
+			,#{rejectReason}
+			,1
+			,DATE_ADD(CURDATE(), INTERVAL 180 DAY)
+			,1
+			,0
+			,0
+			,#{chgDepart}
+		)
+	</insert>		
+
+	<select id="idDuplChkUser" parameterType="UserDto" resultType="int">
+		SELECT COUNT(*) FROM ves_user
+		<where>
+			userid = #{userId}
+		</where>
+	</select>
+	
+	<select id="selectUserList" parameterType="UserDto" resultType="UserDto">
+		SELECT * FROM (SELECT @ROWNUM := @ROWNUM +1 AS rnum, A.* FROM (	
+			SELECT 
+				userid as userId,
+				password as password,
+				level as level,
+				expired as expired,
+				position as position,
+				depart as depart,
+				team as team,
+				username as userName,
+				phonenum as phoneNum,
+				permit as permit,
+				reject_reason as rejectReason,
+				uselimitdate as useLimitDate,
+				passwordlimitdate as passwordLimitDate,
+				smsreceive as smsReceive,
+				depart_modifying_yn as departModifyingYn,
+				quitting_yn as quittingYn,
+				chg_depart as chgDepart
+			FROM 
+				ves_user
+			<where>
+				expired = 'N'
+				<if test="searchKind != null and searchKind != '' ">
+					<if test="searchKind == 'id'">
+						AND userid = #{searchWord}
+					</if>
+					<if test="searchKind == 'name'">
+						<![CDATA[ AND username LIKE CONCAT('%', #{searchWord}, '%') ]]>
+					</if>
+					<if test="searchKind == 'position'">
+						<![CDATA[ AND position LIKE CONCAT('%', #{searchWord}, '%') ]]>
+					</if>
+					<if test="searchKind == 'depart'">
+						<![CDATA[ AND depart LIKE CONCAT('%', #{searchWord}, '%') ]]>
+					</if>
+					<if test="searchKind == 'team'">
+						<![CDATA[ AND team LIKE CONCAT('%', #{searchWord}, '%') ]]>
+					</if>															
+				</if>
+			</where>				
+			ORDER BY permit, userid
+		) A, (SELECT @ROWNUM := 0) R) TB
+		WHERE RNUM BETWEEN ((#{currentPage} - 1) * #{rowSize} + 1) AND (#{currentPage} * #{rowSize})				
+	</select>	
+
+	<select id="selectUsersCounts" parameterType="UserDto" resultType="int">
+		SELECT COUNT(*) FROM ves_user
+		<where>
+			expired = 'N'
+			<if test="searchKind != null and searchKind != '' ">
+				<if test="searchKind == 'id'">
+					AND userid = #{searchWord}
+				</if>
+				<if test="searchKind == 'name'">
+					<![CDATA[ AND username LIKE CONCAT('%', #{searchWord}, '%') ]]>
+				</if>
+				<if test="searchKind == 'position'">
+					<![CDATA[ AND position LIKE CONCAT('%', #{searchWord}, '%') ]]>
+				</if>
+				<if test="searchKind == 'depart'">
+					<![CDATA[ AND depart LIKE CONCAT('%', #{searchWord}, '%') ]]>
+				</if>
+				<if test="searchKind == 'team'">
+					<![CDATA[ AND team LIKE CONCAT('%', #{searchWord}, '%') ]]>
+				</if>															
+			</if>
+		</where>	
+	</select>	
+	
+	<select id="selectAdminList" parameterType="UserDto" resultType="UserDto">
+		SELECT 
+			userid as userId,
+			password as password,
+			level as level,
+			expired as expired,
+			position as position,
+			depart as depart,
+			team as team,
+			username as userName,
+			phonenum as phoneNum,
+			permit as permit,
+			reject_reason as rejectReason,
+			uselimitdate as useLimitDate,
+			passwordlimitdate as passwordLimitDate,
+			smsreceive as smsReceive,
+			depart_modifying_yn as departModifyingYn,
+			quitting_yn as quittingYn,
+			chg_depart as chgDepart
+		FROM 
+			ves_user
+		WHERE
+			permit = 1 
+			AND smsreceive = '1'
+			AND level <![CDATA[>=]]> 8
+	</select>
+	
+	<select id="selectFindInfo" parameterType="UserDto" resultType="UserDto">
+		SELECT 
+			userid as userId,
+			password as password,
+			level as level,
+			expired as expired,
+			position as position,
+			depart as depart,
+			team as team,
+			username as userName,
+			phonenum as phoneNum,
+			permit as permit,
+			reject_reason as rejectReason,
+			uselimitdate as useLimitDate,
+			passwordlimitdate as passwordLimitDate,
+			smsreceive as smsReceive,
+			depart_modifying_yn as departModifyingYn,
+			quitting_yn as quittingYn,
+			chg_depart as chgDepart
+		FROM 
+			ves_user
+		<where>
+			permit = 1
+			AND level <![CDATA[<]]> 8
+			AND replace(phonenum ,'-','') = replace(#{phoneNum} ,'-','')
+			<if test="userName != null and userName != '' ">
+				AND username = #{userName}
+			</if>
+			<if test="userId != null and userId != '' ">
+				AND userid = #{userId}
+			</if>
+		</where>
+	</select>
+	
+	
+	<insert id="insertNaverRealPriceForAPI" parameterType="RealPriceDto">
+		INSERT INTO REAL_PRICE_INFO(
+			deal_type
+			,reg_date
+			,goods_name
+			,size
+			,dong
+			,floor
+			,price
+			,phone_number
+			,etc
+		) VALUES (
+			#{dealType}
+			,#{regDate}
+			,#{goodsName}
+			,#{size}
+			,#{dong}
+			,#{floor}
+			,#{price}
+			,#{phoneNumber}
+			,#{etc}
+		)
+	</insert>	
+	
+	
+	
+</mapper>

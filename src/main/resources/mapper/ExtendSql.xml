@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.happyJ.realestate.dao.ExtendDao">
+	
+	<select id="selectExtendList" parameterType="ExtendCustomDto" resultType="ExtendCustomDto">
+		SELECT * FROM (SELECT @ROWNUM := @ROWNUM +1 AS RNUM, A.* FROM (
+			SELECT 
+				a.idx as idx,
+				a.item_serial as itemSerial,
+				a.ext_reason as extReason,
+				a.ext_status as extStatus,
+				b.userid as userId,
+				c.code_val as permitNm,
+				date_format(a.ext_date, '%Y-%m-%d %H:%i:%s') as extDate,
+				date_format(a.ext_app_date, '%Y-%m-%d %H:%i:%s') as extAppDate
+			FROM ves_item_ext_history a
+			LEFT OUTER JOIN ves_item b ON a.item_serial = b.item_serial 
+			LEFT OUTER JOIN ves_code c ON a.ext_status = c.code_key AND c.code_group = '110'
+			<where>	
+				<if test="level != null and level != ''">
+   					<if test="level != 8 and level != 9">
+	       			b.userid = #{userId}
+	       			</if>
+	       		</if>
+				<if test="searchPermit != null and searchPermit != '' ">
+					AND a.ext_status = #{searchPermit}
+				</if>
+				<if test="searchWord != null and searchWord != '' ">
+					<![CDATA[ AND a.ext_reason LIKE CONCAT('%', #{searchWord}, '%') ]]>
+				</if>					
+			</where>			
+			ORDER BY idx DESC
+		) A, (SELECT @ROWNUM := 0) R) TB
+		WHERE RNUM BETWEEN ((#{currentPage} - 1) * #{rowSize} + 1) AND (#{currentPage} * #{rowSize})
+	</select>
+
+
+	<select id="selectExtendListCount" parameterType="ExtendCustomDto" resultType="int">
+		SELECT COUNT(*)
+		FROM ves_item_ext_history a
+		LEFT OUTER JOIN ves_item b ON a.item_serial = b.item_serial 
+		LEFT OUTER JOIN ves_code c ON a.ext_status = c.code_key AND c.code_group = '110'
+		<where>	
+			<if test="level != null and level != ''">
+				<if test="level != 8 and level != 9">
+       			b.userid = #{userId}
+       			</if>
+       		</if>
+			<if test="searchPermit != null and searchPermit != '' ">
+				AND a.ext_status = #{searchPermit}
+			</if>
+			<if test="searchWord != null and searchWord != '' ">
+				<![CDATA[ AND a.ext_reason LIKE CONCAT('%', #{searchWord}, '%') ]]>
+			</if>			
+		</where>			
+		ORDER BY idx DESC
+	</select>
+
+	<select id="selectExtendListExcel" parameterType="ExtendCustomDto" resultType="ExtendCustomDto">
+		SELECT 
+			a.idx as idx,
+			a.item_serial as itemSerial,
+			a.ext_reason as extReason,
+			a.ext_status as extStatus,
+			b.userid as userId,
+			c.code_val as permitNm,
+			date_format(a.ext_date, '%Y-%m-%d %H:%i:%s') as extDate,
+			date_format(a.ext_app_date, '%Y-%m-%d %H:%i:%s') as extAppDate
+		FROM ves_item_ext_history a
+		LEFT OUTER JOIN ves_item b ON a.item_serial = b.item_serial 
+		LEFT OUTER JOIN ves_code c ON a.ext_status = c.code_key AND c.code_group = '110'
+		<where>	
+			<if test="level != null and level != ''">
+  					<if test="level != 8 and level != 9">
+       			b.userid = #{userId}
+       			</if>
+       		</if>
+			<if test="searchPermit != null and searchPermit != '' ">
+				AND a.ext_status = #{searchPermit}
+			</if>
+			<if test="searchWord != null and searchWord != '' ">
+				<![CDATA[ AND a.ext_reason LIKE CONCAT('%', #{searchWord}, '%') ]]>
+			</if>				
+		</where>			
+		ORDER BY idx DESC
+	</select>
+	
+	<insert id="insertExtendInfo" parameterType="ExtendCustomDto">
+		INSERT INTO ves_item_ext_history(
+			item_serial
+			,ext_reason
+			,ext_status
+		) VALUES (
+			#{itemSerial}
+			,#{extReason}
+			,0
+		)
+	</insert>
+
+	<update id="updateExtendInfo" parameterType="ExtendCustomDto">
+		UPDATE ves_item_ext_history
+		<set>
+			<if test="extReason != null and extReason != '' ">ext_reason = #{extReason},</if>
+			<if test="extStatus != null and extStatus != '' ">ext_status = #{extStatus},</if>
+			ext_app_date = now()
+		</set>
+		<where>
+			item_serial = #{itemSerial}
+			<if test="idx != null and idx != '' ">AND idx = #{idx}</if>
+		</where>
+	</update>	
+</mapper>

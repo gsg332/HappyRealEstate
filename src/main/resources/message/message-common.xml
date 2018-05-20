@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<properties>
+	<!-- 홈화면 안내 문구 -->
+	<entry key="home.service">AM 09:00~18:00 주말,공휴일은 쉽니다</entry>
+	<entry key="home.manual">쉽고 편리한 설치 및 사용을&#10;지원하는 매뉴얼입니다</entry>
+	<entry key="home.player">최적화된 기능을 제공하는&#10;전용 플레이어 입니다</entry>
+	
+	<!-- 로그인  -->
+	<entry key="logout.message">정상적으로 로그아웃 되었습니다.</entry>
+	<entry key="login.badCredentials.message">ID 또는 패스워드를 잘못 입력하셨거나 탈퇴한 사용자 입니다. 확인 후 다시 로그인해 주세요.</entry>
+	<entry key="login.denied.message">허용된 접속 IP가 아닙니다. IP 허용 요청 후 사용하시기 바랍니다.</entry>
+	<entry key="login.duplicate.message">다른 컴퓨터에서 해당 ID로 접속하여 로그아웃 되었습니다.</entry>
+	<entry key="login.timeover.message">접속 유지시간이 초과되어 로그아웃 되었습니다.</entry>
+	
+	<!-- 리스트 결과 없음 -->
+	<entry key="list.empty.message">검색 결과가 없습니다.</entry>
+
+	<!-- 신청서 반려 사유 -->
+	<entry key="reject.reason.1">1. 공문 번호 및 공문(hwp_아래한글 형식)을 반드시 첨부해 주시기 바랍니다.</entry>
+	<entry key="reject.reason.2">2. 공문에는 CCTV 번호를 반드시 기재해 주시기 바랍니다.</entry>
+	<entry key="reject.reason.3">3. 공문에 기록된 영상요청기간과 실제 신청서 작성시의 시작일시, 종료일시를 동일하게 기재해 주시기 바랍니다.</entry>
+	
+	<!-- 보안 경고문 -->
+	<entry key="security.caution.msg">본 CCTV 영상자료 조회로 업무상 알게 된 개인정보를 누설하거나 권한 없이 다른 사람이 이용하도록 제공하는 행위, 
+	정당한 권한 없이 또는 허용된 권한을 초과하여 개인정보를 유출할 경우 “개인정보보호법” 제 71조에 의거 5년 이하의 징역 또는 5천만원 이하의 벌금에 처하게 됩니다.</entry>
+	
+	<!-- 제공 근거 -->
+	<entry key="offer.basis">「개인정보 보호법」 제18조(개인정보의 목적 외 이용·제공 제한)</entry>
+	
+	<!-- 팝업 컨텐츠  -->
+	<entry key="pop.history.apply">[HappyRealEstate] 신청서가 접수되었습니다. 신청번호 : </entry>
+	<entry key="pop.history.reapply">[HappyRealEstate] 재신청이 접수되었습니다. 신청번호 : </entry>
+	<entry key="pop.history.extend">[HappyRealEstate] 연장신청이 접수되었습니다. 신청번호 : </entry>
+	<entry key="pop.history.reject">[HappyRealEstate] 신청서가 반려되었습니다. 신청번호 : </entry>
+	<entry key="pop.history.join">[HappyRealEstate] 사용자 등록 신청이 접수되었습니다. 신청번호 : </entry>
+	<entry key="pop.history.evidence">[HappyRealEstate] 증거자료 제출 신청이 접수되었습니다. 신청번호 : </entry>
+	
+</properties>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<taglib xmlns="http://java.sun.com/xml/ns/javaee" version="2.1">
+  <tlib-version>1.0</tlib-version>
+  <short-name>Custom Tag</short-name>
+  <tag>
+    <name>FirstStrCut</name>
+    <tag-class>com.happyJ.realestate.custom.tag.FirstStrCut</tag-class>
+    <body-content>empty</body-content>
+    
+    <dynamic-attributes>true</dynamic-attributes>
+    
+    <!-- 
+    <attribute>
+       <name>value</name>
+       <required>true</required>
+       <type>String</type>
+       <fragment>false</fragment>
+    </attribute>
+    
+     -->
+  </tag>
+</taglib>

@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.happyJ.realestate.dao.ApartDao">
+	
+	<insert id="insertApart" parameterType="ApartDto">
+		INSERT INTO REAL_ESTATE(
+			u_re_id,
+			p_u_region_id,
+			sido,
+			sgg,
+			emd,
+			ri,
+			re_name,
+			re_type,
+			house_cnt,
+			up_parking_cnt,
+			down_parking_cnt,
+			dong_cnt,
+			heating_type,
+			hall_type,
+			heating_fuel,
+			construction_firm,
+			completion_date,
+			extent,
+			floor_area_ratio,
+			cover_ratio,
+			top_floor,
+			bottom_floor,
+			manage_office_phone,
+			x,
+			y
+		) VALUES (
+			#{uReId},
+			#{pURegionId},
+			#{sido},
+			#{sgg},
+			#{emd},
+			#{ri},
+			#{reName},
+			#{reType},
+			#{houseCnt},
+			#{upParkingCnt},
+			#{downParkingCnt},
+			#{dongCnt},
+			#{heatingType},
+			#{hallType},
+			#{heatingFuel},
+			#{constructionFirm},
+			#{completionDate},
+			#{extent},
+			#{floorAreaRatio},
+			#{coverRatio},
+			#{topFloor},
+			#{bottomFloor},
+			#{manageOfficePhone},
+			#{x},
+			#{y}
+		)
+		ON DUPLICATE KEY UPDATE
+			p_u_region_id = #{pURegionId},
+			sido = #{sido},
+			sgg = #{sgg},
+			emd = #{emd},
+			ri = #{ri},
+			re_name = #{reName},
+			re_type = #{reType},
+			house_cnt = #{houseCnt},
+			up_parking_cnt = #{upParkingCnt},
+			down_parking_cnt = #{downParkingCnt},
+			dong_cnt = #{dongCnt},
+			heating_type = #{heatingType},
+			hall_type = #{hallType},
+			heating_fuel = #{heatingFuel},
+			construction_firm = #{constructionFirm},
+			completion_date = #{completionDate},
+			extent = #{extent},
+			floor_area_ratio = #{floorAreaRatio},
+			cover_ratio = #{coverRatio},
+			top_floor = #{topFloor},
+			bottom_floor = #{bottomFloor},
+			manage_office_phone = #{manageOfficePhone},
+			x = #{x},
+			y = #{y}
+		<selectKey keyProperty="u_re_id" resultType="Long" order="AFTER">
+			SELECT LAST_INSERT_ID()
+		</selectKey>
+	</insert>
+	
+	<select id="selectApartList" parameterType="ApartDto" resultType="ApartDto">
+			SELECT 
+				u_re_id uReId,
+				p_u_region_id pURegionId,
+				sido sido,
+				sgg sgg,
+				emd emd,
+				ri ri,
+				re_name 'reName',
+				re_type reType,
+				house_cnt houseCnt,
+				up_parking_cnt upParkingCnt,
+				down_parking_cnt downParkingCnt,
+				dong_cnt dongCnt,
+				heating_type heatingType,
+				heating_fuel heatingFuel,
+				hall_type hallType,
+				construction_firm constructionFirm,
+				completion_date completionDate,
+				extent extent,
+				floor_area_ratio floorAreaRatio,
+				cover_ratio coverRatio,
+				top_floor topFloor,
+				bottom_floor bottomFloor,
+				manage_office_phone manageOfficePhone,
+				x x,
+				y y,
+				reg_date regDate
+			FROM REAL_ESTATE
+		<where>
+		    p_u_region_id = IF(LENGTH(#{pURegionId})=8, RPAD(#{pURegionId},10,'00'), #{pURegionId})
+		</where>
+		ORDER BY 'reName'  
+	</select>
+	
+</mapper>
